@@ -1,68 +1,92 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database import get_db_connection
+from ui.modern_window import ModernWindow
 
-class DatabaseWindow(tk.Toplevel):
+class DatabaseWindow(ModernWindow):
     def __init__(self, parent):
-        super().__init__(parent)
-        self.title("Base de Datos Maestra - Información Total")
-        self.geometry("1100x700")
-        
+        super().__init__(parent, title="Base de Datos Maestra", width=1100, height=750)
         self.create_widgets()
         self.load_data()
 
     def create_widgets(self):
-        # Toolbar / Filter
-        toolbar = tk.Frame(self, bg="#e0e0e0")
-        toolbar.pack(fill=tk.X, padx=5, pady=5)
+        # Header
+        self.create_header("🗄️ Base de Datos - Información Total")
         
-        tk.Label(toolbar, text="Buscar Cliente (DNI/Nombre):", bg="#e0e0e0").pack(side=tk.LEFT, padx=5)
+        # Content
+        content = self.create_content_frame()
+        
+        # Search toolbar
+        toolbar_card = self.create_card_frame(content)
+        toolbar_card.pack(fill=tk.X, padx=20, pady=(0, 10))
+        
+        toolbar = tk.Frame(toolbar_card, bg=self.card_bg)
+        toolbar.pack(fill=tk.X, padx=15, pady=10)
+        
+        tk.Label(toolbar, text="Buscar Cliente (DNI/Nombre):", bg=self.card_bg, fg=self.text_color,
+                font=("Segoe UI", 10, "bold")).pack(side=tk.LEFT, padx=5)
         self.search_var = tk.StringVar()
         self.search_var.trace("w", lambda name, index, mode: self.load_data())
-        tk.Entry(toolbar, textvariable=self.search_var, width=30).pack(side=tk.LEFT, padx=5)
+        search_entry = ttk.Entry(toolbar, textvariable=self.search_var, width=30, font=("Segoe UI", 10))
+        search_entry.pack(side=tk.LEFT, padx=5)
         
-        tk.Button(toolbar, text="Actualizar", command=self.load_data).pack(side=tk.LEFT, padx=10)
+        refresh_btn = tk.Button(toolbar, text="🔄 Actualizar", command=self.load_data,
+                               bg=self.theme_colors['gradient_end'], fg='white',
+                               font=("Segoe UI", 9, "bold"), relief='flat', cursor='hand2', padx=10, pady=5)
+        refresh_btn.pack(side=tk.LEFT, padx=10)
 
-        # Main Treeview (Clients + Summary)
+        # Main table card
+        table_card = self.create_card_frame(content)
+        table_card.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 10))
+        
+        table_frame = tk.Frame(table_card, bg=self.card_bg)
+        table_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+        
         columns = ("id", "dni", "name", "loans_count", "active_loans", "total_debt", "rating")
-        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=15)
+        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=12)
         
         self.tree.heading("id", text="ID")
         self.tree.heading("dni", text="DNI")
         self.tree.heading("name", text="Cliente")
-        self.tree.heading("loans_count", text="Historial Préstamos")
+        self.tree.heading("loans_count", text="Historial")
         self.tree.heading("active_loans", text="Activos")
-        self.tree.heading("total_debt", text="Deuda Total (S/.)")
+        self.tree.heading("total_debt", text="Deuda (S/.)")
         self.tree.heading("rating", text="Calificación")
         
         self.tree.column("id", width=50)
         self.tree.column("dni", width=100)
         self.tree.column("name", width=250)
-        self.tree.column("loans_count", width=100, anchor="center")
+        self.tree.column("loans_count", width=80, anchor="center")
         self.tree.column("active_loans", width=80, anchor="center")
         self.tree.column("total_debt", width=120, anchor="e")
         self.tree.column("rating", width=150, anchor="center")
         
-        self.tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.tree.pack(fill=tk.BOTH, expand=True)
         
-        # Tags for coloring rows
-        self.tree.tag_configure("buen_pagador", background="#C8E6C9") # Green tint
-        self.tree.tag_configure("regular", background="#FFF9C4")      # Yellow tint
-        self.tree.tag_configure("moroso", background="#FFCDD2")       # Red tint
+        # Tags for coloring
+        self.tree.tag_configure("buen_pagador", background="#C8E6C9")
+        self.tree.tag_configure("regular", background="#FFF9C4")
+        self.tree.tag_configure("moroso", background="#FFCDD2")
         self.tree.tag_configure("nuevo", background="white")
 
-        # Detail Section (Bottom)
-        detail_frame = tk.LabelFrame(self, text="Detalle de Préstamos del Cliente Seleccionado")
-        detail_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        # Detail card
+        detail_card = self.create_card_frame(content)
+        detail_card.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 10))
         
-        self.detail_tree = ttk.Treeview(detail_frame, columns=("id", "type", "date", "amount", "status"), show="headings")
-        self.detail_tree.heading("id", text="ID Préstamo")
+        tk.Label(detail_card, text="Préstamos del Cliente Seleccionado", bg=self.card_bg, fg=self.text_color,
+                font=("Segoe UI", 11, "bold")).pack(pady=10, padx=15, anchor="w")
+        
+        detail_frame = tk.Frame(detail_card, bg=self.card_bg)
+        detail_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
+        
+        self.detail_tree = ttk.Treeview(detail_frame, columns=("id", "type", "date", "amount", "status"), show="headings", height=5)
+        self.detail_tree.heading("id", text="ID")
         self.detail_tree.heading("type", text="Tipo")
         self.detail_tree.heading("date", text="Fecha")
         self.detail_tree.heading("amount", text="Monto")
         self.detail_tree.heading("status", text="Estado")
         
-        self.detail_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.detail_tree.pack(fill=tk.BOTH, expand=True)
         
         self.tree.bind("<<TreeviewSelect>>", self.on_select_client)
 
@@ -75,7 +99,6 @@ class DatabaseWindow(tk.Toplevel):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Get all clients
         query = "SELECT * FROM clients WHERE 1=1"
         params = []
         if search:
@@ -88,20 +111,17 @@ class DatabaseWindow(tk.Toplevel):
         for client in clients:
             client_id = client['id']
             
-            # Calculate Stats
             cursor.execute("SELECT * FROM loans WHERE client_id = ?", (client_id,))
             loans = cursor.fetchall()
             
             loans_count = len(loans)
             active_loans = sum(1 for l in loans if l['status'] == 'active')
-            total_debt = sum(l['amount'] for l in loans if l['status'] == 'active') # Simplified debt (principal only)
+            total_debt = sum(l['amount'] for l in loans if l['status'] == 'active')
             
-            # Calculate Rating
             rating = "Nuevo"
             tag = "nuevo"
             
             if loans_count > 0:
-                # Check for overdue loans
                 overdue_count = sum(1 for l in loans if l['status'] == 'overdue')
                 
                 if overdue_count > 0:

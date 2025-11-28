@@ -83,6 +83,43 @@ def apply_styles(root, theme_name='light'):
             'success_bg': '#D4AF37', 'success_active': '#A88825',
             'tree_head_bg': '#546E7A', 'tree_head_fg': '#ffffff',
             'label_fg': '#37474F'
+        },
+        # NUEVOS TEMAS MODERNOS
+        'turquesa': { # Turquesa Moderno (como imagen de referencia)
+            'primary': '#00ACC1', 'secondary': '#4DD0E1', 'bg': '#4DD0E1', 'text': '#263238',
+            'btn_bg': '#26C6DA', 'btn_active': '#00ACC1',
+            'primary_btn_active': '#00838F', 'danger_bg': '#E74C3C', 'danger_active': '#C0392B',
+            'success_bg': '#52C41A', 'success_active': '#389E0D',
+            'tree_head_bg': '#00ACC1', 'tree_head_fg': '#ffffff',
+            'label_fg': '#263238',
+            'gradient_start': '#4DD0E1', 'gradient_end': '#00ACC1'
+        },
+        'oscuro': { # Oscuro Minimalista
+            'primary': '#42A5F5', 'secondary': '#26C6DA', 'bg': '#263238', 'text': '#ECEFF1',
+            'btn_bg': '#37474F', 'btn_active': '#455A64',
+            'primary_btn_active': '#1976D2', 'danger_bg': '#EF5350', 'danger_active': '#E53935',
+            'success_bg': '#66BB6A', 'success_active': '#43A047',
+            'tree_head_bg': '#37474F', 'tree_head_fg': '#ffffff',
+            'label_fg': '#ECEFF1',
+            'gradient_start': '#263238', 'gradient_end': '#37474F'
+        },
+        'claro': { # Claro Minimalista
+            'primary': '#5C6BC0', 'secondary': '#42A5F5', 'bg': '#FFFFFF', 'text': '#263238',
+            'btn_bg': '#F5F5F5', 'btn_active': '#EEEEEE',
+            'primary_btn_active': '#3949AB', 'danger_bg': '#EF5350', 'danger_active': '#E53935',
+            'success_bg': '#66BB6A', 'success_active': '#43A047',
+            'tree_head_bg': '#EEEEEE', 'tree_head_fg': '#263238',
+            'label_fg': '#546E7A',
+            'gradient_start': '#FFFFFF', 'gradient_end': '#F5F5F5'
+        },
+        'morado': { # Morado Elegante
+            'primary': '#9C27B0', 'secondary': '#BA68C8', 'bg': '#7B1FA2', 'text': '#F3E5F5',
+            'btn_bg': '#8E24AA', 'btn_active': '#7B1FA2',
+            'primary_btn_active': '#6A1B9A', 'danger_bg': '#E74C3C', 'danger_active': '#C0392B',
+            'success_bg': '#66BB6A', 'success_active': '#43A047',
+            'tree_head_bg': '#8E24AA', 'tree_head_fg': '#ffffff',
+            'label_fg': '#F3E5F5',
+            'gradient_start': '#7B1FA2', 'gradient_end': '#9C27B0'
         }
     }
 
@@ -144,3 +181,121 @@ def ask_admin_password(parent):
     else:
         messagebox.showerror("Error", "Contraseña incorrecta")
         return False
+
+def create_gradient_image(width, height, color1, color2):
+    """Crea una imagen con degradado vertical usando PIL."""
+    from PIL import Image, ImageDraw
+    
+    # Convertir colores hex a RGB
+    def hex_to_rgb(hex_color):
+        hex_color = hex_color.lstrip('#')
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    
+    rgb1 = hex_to_rgb(color1)
+    rgb2 = hex_to_rgb(color2)
+    
+    # Crear imagen
+    image = Image.new('RGB', (width, height))
+    draw = ImageDraw.Draw(image)
+    
+    # Dibujar degradado
+    for y in range(height):
+        # Interpolar entre los dos colores
+        ratio = y / height
+        r = int(rgb1[0] * (1 - ratio) + rgb2[0] * ratio)
+        g = int(rgb1[1] * (1 - ratio) + rgb2[1] * ratio)
+        b = int(rgb1[2] * (1 - ratio) + rgb2[2] * ratio)
+        draw.line([(0, y), (width, y)], fill=(r, g, b))
+    
+    return image
+
+def get_theme_colors(theme_name='light'):
+    """Obtiene los colores de un tema específico."""
+    themes = {
+        'light': {'gradient_start': '#f5f5f5', 'gradient_end': '#e0e0e0'},
+        'dark': {'gradient_start': '#303030', 'gradient_end': '#424242'},
+        'vivid': {'gradient_start': '#B2DFDB', 'gradient_end': '#80CBC4'},
+        'pro1': {'gradient_start': '#E3F2FD', 'gradient_end': '#BBDEFB'},
+        'pro2': {'gradient_start': '#ECEFF1', 'gradient_end': '#CFD8DC'},
+        'turquesa': {'gradient_start': '#4DD0E1', 'gradient_end': '#00ACC1'},
+        'oscuro': {'gradient_start': '#263238', 'gradient_end': '#37474F'},
+        'claro': {'gradient_start': '#FFFFFF', 'gradient_end': '#F5F5F5'},
+        'morado': {'gradient_start': '#7B1FA2', 'gradient_end': '#9C27B0'}
+    }
+    return themes.get(theme_name, themes['light'])
+
+def get_module_colors(theme_name='turquesa'):
+    """Obtiene los colores específicos para cada módulo según el tema."""
+    # Colores base para tema Turquesa y temas modernos
+    if theme_name in ['turquesa', 'claro']:
+        return {
+            'Clientes': '#4A90E2',
+            'Empeño': '#FF8C42',
+            'Bancario': '#52C41A',
+            'Rapidiario': '#9B59B6',
+            'Caja': '#E74C3C',
+            'Calculadora': '#1ABC9C',
+            'Análisis': '#E91E63',
+            'Configuración': '#F39C12',
+            'Base de Datos': '#5C6BC0',
+            'Documentos': '#CDDC39'
+        }
+    elif theme_name == 'oscuro':
+        # Colores más vibrantes para tema oscuro
+        return {
+            'Clientes': '#42A5F5',
+            'Empeño': '#FF9800',
+            'Bancario': '#66BB6A',
+            'Rapidiario': '#AB47BC',
+            'Caja': '#EF5350',
+            'Calculadora': '#26C6DA',
+            'Análisis': '#EC407A',
+            'Configuración': '#FFA726',
+            'Base de Datos': '#7E57C2',
+            'Documentos': '#D4E157'
+        }
+    elif theme_name == 'morado':
+        # Tonos complementarios para tema morado
+        return {
+            'Clientes': '#BA68C8',
+            'Empeño': '#FFB74D',
+            'Bancario': '#81C784',
+            'Rapidiario': '#CE93D8',
+            'Caja': '#E57373',
+            'Calculadora': '#4DD0E1',
+            'Análisis': '#F06292',
+            'Configuración': '#FFD54F',
+            'Base de Datos': '#9575CD',
+            'Documentos': '#DCE775'
+        }
+    else:
+        # Colores por defecto (temas antiguos)
+        return {
+            'Clientes': '#2196F3',
+            'Empeño': '#FF9800',
+            'Bancario': '#4CAF50',
+            'Rapidiario': '#9C27B0',
+            'Caja': '#F44336',
+            'Calculadora': '#00BCD4',
+            'Análisis': '#E91E63',
+            'Configuración': '#FFC107',
+            'Base de Datos': '#673AB7',
+            'Documentos': '#8BC34A'
+        }
+
+def get_module_icon(module_name):
+    """Obtiene el icono Unicode para cada módulo."""
+    icons = {
+        'Clientes': '👤',
+        'Empeño': '🏠',
+        'Bancario': '🏛️',
+        'Rapidiario': '💸',
+        'Caja': '💰',
+        'Calculadora': '🧮',
+        'Análisis': '📊',
+        'Configuración': '⚙️',
+        'Base de Datos': '🗄️',
+        'Documentos': '📄'
+    }
+    return icons.get(module_name, '📌')
+
