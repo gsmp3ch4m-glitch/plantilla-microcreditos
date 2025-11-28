@@ -20,8 +20,15 @@ class MainWindow(tk.Toplevel):
         self.on_logout = on_logout
         
         self.title(f"Sistema - {get_setting('company_name') or 'El Canguro Pro'}")
-        self.geometry("1024x768")
-        self.state('zoomed') # Maximize
+        
+        # Centrar la ventana en la pantalla
+        window_width = 900
+        window_height = 650
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        x = (screen_width // 2) - (window_width // 2)
+        y = (screen_height // 2) - (window_height // 2)
+        self.geometry(f'{window_width}x{window_height}+{x}+{y}')
         
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         
