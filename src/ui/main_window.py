@@ -140,9 +140,7 @@ class MainWindow(tk.Toplevel):
         # Define modules based on settings
         modules = [
             ("Clientes", "mod_clients_visible", "label_clients"),
-            ("Empeño", "mod_loan1_visible", "label_loan1"),
-            ("Bancario", "mod_loan2_visible", "label_loan2"),
-            ("Rapidiario", "mod_loan3_visible", "label_loan3"),
+            ("Préstamos", "mod_loans_visible", "label_loans"),  # New unified module
             ("Caja", "mod_cash_visible", "label_cash"),
             ("Calculadora", "mod_calc_visible", "label_calc"),
             ("Análisis", "mod_analysis_visible", "label_analysis"),
@@ -179,12 +177,9 @@ class MainWindow(tk.Toplevel):
     def show_module(self, module_name):
         if module_name == "Clientes":
             ClientsWindow(self)
-        elif module_name == "Empeño":
-            LoansWindow(self, "empeno")
-        elif module_name == "Bancario":
-            LoansWindow(self, "bancario")
-        elif module_name == "Rapidiario":
-            LoansWindow(self, "rapidiario")
+        elif module_name == "Préstamos":
+            from ui.loans_menu_window import LoansMenuWindow
+            LoansMenuWindow(self, self.user_data)
         elif module_name == "Caja":
             CashWindow(self)
         elif module_name == "Configuración":
@@ -195,8 +190,6 @@ class MainWindow(tk.Toplevel):
             CalculatorWindow(self)
         elif module_name == "Análisis":
             AnalysisWindow(self)
-        elif module_name in ["Loan4", "Loan5"]:
-            messagebox.showinfo("Información", f"Módulo '{module_name}' disponible para personalización.")
         elif module_name == "Documentos":
             messagebox.showinfo("Documentos", "Módulo de gestión de documentos (Próximamente).")
         else:

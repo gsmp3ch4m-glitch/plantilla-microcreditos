@@ -230,9 +230,11 @@ def get_module_colors(theme_name='turquesa'):
     if theme_name in ['turquesa', 'claro']:
         return {
             'Clientes': '#4A90E2',
+            'Préstamos': '#9B59B6',
             'Empeño': '#FF8C42',
             'Bancario': '#52C41A',
             'Rapidiario': '#9B59B6',
+            'Congelado': '#00BCD4',
             'Caja': '#E74C3C',
             'Calculadora': '#1ABC9C',
             'Análisis': '#E91E63',
@@ -241,27 +243,14 @@ def get_module_colors(theme_name='turquesa'):
             'Documentos': '#CDDC39'
         }
     elif theme_name == 'oscuro':
-        # Colores más vibrantes para tema oscuro
         return {
-            'Clientes': '#42A5F5',
-            'Empeño': '#FF9800',
-            'Bancario': '#66BB6A',
-            'Rapidiario': '#AB47BC',
-            'Caja': '#EF5350',
-            'Calculadora': '#26C6DA',
-            'Análisis': '#EC407A',
-            'Configuración': '#FFA726',
-            'Base de Datos': '#7E57C2',
-            'Documentos': '#D4E157'
-        }
-    elif theme_name == 'morado':
-        # Tonos complementarios para tema morado
-        return {
-            'Clientes': '#BA68C8',
+            'Clientes': '#64B5F6',
+            'Préstamos': '#BA68C8',
             'Empeño': '#FFB74D',
             'Bancario': '#81C784',
-            'Rapidiario': '#CE93D8',
-            'Caja': '#E57373',
+            'Rapidiario': '#BA68C8',
+            'Congelado': '#4DD0E1',
+            'Caja': '#EF5350',
             'Calculadora': '#4DD0E1',
             'Análisis': '#F06292',
             'Configuración': '#FFD54F',
@@ -269,12 +258,13 @@ def get_module_colors(theme_name='turquesa'):
             'Documentos': '#DCE775'
         }
     else:
-        # Colores por defecto (temas antiguos)
         return {
             'Clientes': '#2196F3',
+            'Préstamos': '#9C27B0',
             'Empeño': '#FF9800',
             'Bancario': '#4CAF50',
             'Rapidiario': '#9C27B0',
+            'Congelado': '#00BCD4',
             'Caja': '#F44336',
             'Calculadora': '#00BCD4',
             'Análisis': '#E91E63',
@@ -287,9 +277,11 @@ def get_module_icon(module_name):
     """Obtiene el icono Unicode para cada módulo."""
     icons = {
         'Clientes': '👤',
+        'Préstamos': '💰',  # New unified loans module
         'Empeño': '🏠',
         'Bancario': '🏛️',
         'Rapidiario': '💸',
+        'Congelado': '❄️',  # Frozen loans
         'Caja': '💰',
         'Calculadora': '🧮',
         'Análisis': '📊',
