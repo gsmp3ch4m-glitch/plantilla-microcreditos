@@ -4,7 +4,7 @@ import tkinter.ttk as ttk
 from PIL import Image, ImageTk
 import sqlite3
 from database import get_db_connection
-from ui.ui_utils import apply_styles, create_gradient_image, get_theme_colors
+from ui.ui_utils import apply_styles, create_gradient_image
 from utils.settings_manager import get_setting
 
 class LoginWindow(tk.Toplevel):
@@ -16,7 +16,7 @@ class LoginWindow(tk.Toplevel):
         
         # Center the window
         window_width = 450
-        window_height = 550
+        window_height = 600
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         x_cordinate = int((screen_width/2) - (window_width/2))
@@ -38,49 +38,42 @@ class LoginWindow(tk.Toplevel):
     def create_widgets(self):
         company_name = get_setting('company_name') or "El Canguro Pro"
         
-        # Create gradient background
-        theme_colors = get_theme_colors(self.current_theme)
-        gradient_img = create_gradient_image(450, 550, 
-                                            theme_colors['gradient_start'], 
-                                            theme_colors['gradient_end'])
+        # Create ORANGE gradient background (naranja)
+        # Degradado naranja claro a naranja oscuro
+        gradient_img = create_gradient_image(450, 600, '#FFB74D', '#FF8A65')
         self.bg_photo = ImageTk.PhotoImage(gradient_img)
         
         # Label for background
         bg_label = tk.Label(self, image=self.bg_photo)
         bg_label.place(x=0, y=0, relwidth=1, relheight=1)
         
-        # Determine text color based on theme
-        if self.current_theme in ['oscuro', 'morado']:
-            text_color = '#FFFFFF'
-            card_bg = '#37474F' if self.current_theme == 'oscuro' else '#8E24AA'
-        else:
-            text_color = '#263238'
-            card_bg = '#FFFFFF'
+        # Main card/container - White card
+        card_bg = '#FFFFFF'
+        text_color = '#263238'
         
-        # Main card/container
         card_frame = tk.Frame(self, bg=card_bg, relief='flat', bd=0)
-        card_frame.place(relx=0.5, rely=0.5, anchor='center', width=350, height=420)
+        card_frame.place(relx=0.5, rely=0.5, anchor='center', width=360, height=450)
         
-        # Logo/Icon
+        # Logo/Icon - Lock icon
         logo_label = tk.Label(card_frame, text="🔐", font=("Segoe UI Emoji", 48), 
-                             bg=card_bg, fg=theme_colors['gradient_end'])
-        logo_label.pack(pady=(30, 10))
+                             bg=card_bg, fg='#FF8A65')
+        logo_label.pack(pady=(25, 10))
         
         # Company Name
         company_label = tk.Label(card_frame, text=company_name, 
-                                font=("Segoe UI", 20, "bold"), 
+                                font=("Segoe UI", 17, "bold"), 
                                 bg=card_bg, fg=text_color)
         company_label.pack(pady=(0, 5))
         
-        # "INGRESAR" Title
+        # "INICIAR SESIÓN" Title
         title_label = tk.Label(card_frame, text="INICIAR SESIÓN", 
                               font=("Segoe UI", 12, "bold"), 
                               bg=card_bg, fg=text_color)
-        title_label.pack(pady=(0, 25))
+        title_label.pack(pady=(0, 20))
         
         # Form container
         form_frame = tk.Frame(card_frame, bg=card_bg)
-        form_frame.pack(padx=30, fill=tk.X)
+        form_frame.pack(padx=35, fill=tk.X)
         
         # Usuario
         user_label = tk.Label(form_frame, text="Usuario:", 
@@ -98,19 +91,30 @@ class LoginWindow(tk.Toplevel):
         pass_label.pack(anchor="w", pady=(0, 5))
         
         self.entry_pass = ttk.Entry(form_frame, show="●", font=("Segoe UI", 11))
-        self.entry_pass.pack(fill=tk.X, ipady=8, pady=(0, 25))
+        self.entry_pass.pack(fill=tk.X, ipady=8, pady=(0, 20))
         
-        # Login button - Modern style
-        login_btn = tk.Button(form_frame, text="INGRESAR", 
+        # Login button - BLUE button
+        login_btn = tk.Button(form_frame, text="INICIAR SESIÓN", 
                              command=self.login,
-                             bg=theme_colors['gradient_end'], 
+                             bg='#2196F3',  # Azul
                              fg='white',
                              font=("Segoe UI", 11, "bold"),
                              relief='flat', 
                              cursor='hand2',
-                             activebackground=self.darken_color(theme_colors['gradient_end']),
-                             activeforeground='white')
+                             activebackground='#1976D2',
+                             activeforeground='white',
+                             bd=0)
         login_btn.pack(fill=tk.X, ipady=12)
+        
+        # Hover effects
+        def on_enter(e):
+            login_btn.config(bg='#1976D2')
+        
+        def on_leave(e):
+            login_btn.config(bg='#2196F3')
+        
+        login_btn.bind('<Enter>', on_enter)
+        login_btn.bind('<Leave>', on_leave)
         
         # Bind Enter key to login
         self.entry_user.bind('<Return>', lambda e: self.entry_pass.focus())
@@ -118,13 +122,6 @@ class LoginWindow(tk.Toplevel):
         
         # Focus on username field
         self.entry_user.focus()
-        
-    def darken_color(self, hex_color, factor=0.2):
-        """Oscurece un color hexadecimal."""
-        hex_color = hex_color.lstrip('#')
-        rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
-        new_rgb = tuple(max(0, int(c * (1 - factor))) for c in rgb)
-        return f'#{new_rgb[0]:02x}{new_rgb[1]:02x}{new_rgb[2]:02x}'
         
     def login(self):
         username = self.entry_user.get()

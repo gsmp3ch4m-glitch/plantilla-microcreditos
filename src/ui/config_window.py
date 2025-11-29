@@ -56,30 +56,47 @@ class ConfigWindow(tk.Toplevel):
         # Dialog to add user
         dialog = tk.Toplevel(self)
         dialog.title("Nuevo Usuario")
-        dialog.geometry("400x500")
+        dialog.geometry("450x650")  # Increased height
+        dialog.resizable(False, False)
         
-        tk.Label(dialog, text="Usuario:").pack()
-        e_user = tk.Entry(dialog)
-        e_user.pack()
+        # Main frame with padding
+        main_frame = tk.Frame(dialog, padx=20, pady=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
         
-        tk.Label(dialog, text="Contraseña:").pack()
-        e_pass = tk.Entry(dialog, show="*")
-        e_pass.pack()
+        # Title
+        tk.Label(main_frame, text="AGREGAR NUEVO USUARIO", font=("Segoe UI", 14, "bold")).pack(pady=(0, 20))
         
-        tk.Label(dialog, text="Nombre Completo:").pack()
-        e_name = tk.Entry(dialog)
-        e_name.pack()
+        # Usuario
+        tk.Label(main_frame, text="Usuario:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 2))
+        e_user = ttk.Entry(main_frame, font=("Segoe UI", 10))
+        e_user.pack(fill=tk.X, ipady=5, pady=(0, 10))
         
-        tk.Label(dialog, text="Rol:").pack()
-        e_role = ttk.Combobox(dialog, values=["admin", "cajero", "analista"])
+        # Contraseña
+        tk.Label(main_frame, text="Contraseña:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 2))
+        e_pass = ttk.Entry(main_frame, show="●", font=("Segoe UI", 10))
+        e_pass.pack(fill=tk.X, ipady=5, pady=(0, 10))
+        
+        # Nombre Completo
+        tk.Label(main_frame, text="Nombre Completo:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 2))
+        e_name = ttk.Entry(main_frame, font=("Segoe UI", 10))
+        e_name.pack(fill=tk.X, ipady=5, pady=(0, 10))
+        
+        # Rol
+        tk.Label(main_frame, text="Rol:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 2))
+        e_role = ttk.Combobox(main_frame, values=["admin", "cajero", "analista"], font=("Segoe UI", 10))
         e_role.current(1)
-        e_role.pack()
+        e_role.pack(fill=tk.X, ipady=5, pady=(0, 15))
         
         # Permissions Frame
-        tk.Label(dialog, text="Permisos (Módulos):").pack(pady=(10, 5))
+        tk.Label(main_frame, text="Permisos (Módulos):", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(10, 5))
         
-        canvas = tk.Canvas(dialog)
-        scrollbar = tk.Scrollbar(dialog, orient="vertical", command=canvas.yview)
+        # Scrollable permissions - REDUCED HEIGHT
+        perm_container = tk.Frame(main_frame, height=120)  # Reduced from 150 to 120
+        perm_container.pack(fill=tk.X, pady=(0, 15))
+        perm_container.pack_propagate(False)
+        
+        canvas = tk.Canvas(perm_container, height=120)  # Reduced from 150 to 120
+        scrollbar = tk.Scrollbar(perm_container, orient="vertical", command=canvas.yview)
         perm_frame = tk.Frame(canvas)
         
         perm_frame.bind(
@@ -112,8 +129,8 @@ class ConfigWindow(tk.Toplevel):
         perm_vars = {}
         for key, label in modules:
             var = tk.BooleanVar()
-            chk = tk.Checkbutton(perm_frame, text=label, variable=var)
-            chk.pack(anchor="w")
+            chk = tk.Checkbutton(perm_frame, text=label, variable=var, font=("Segoe UI", 9))
+            chk.pack(anchor="w", padx=5, pady=2)
             perm_vars[key] = (var, chk)
             
         def on_role_change(event):
@@ -130,6 +147,11 @@ class ConfigWindow(tk.Toplevel):
         on_role_change(None) # Init
         
         def save():
+            # Validation
+            if not e_user.get() or not e_pass.get() or not e_name.get():
+                messagebox.showerror("Error", "Por favor complete todos los campos")
+                return
+            
             role = e_role.get()
             
             # Check limit
@@ -162,33 +184,71 @@ class ConfigWindow(tk.Toplevel):
                 from database import log_action
                 log_action(self.user_data['id'], "Crear Usuario", f"Usuario creado: {e_user.get()} ({role})")
                 
-                messagebox.showinfo("Éxito", "Usuario creado")
+                messagebox.showinfo("Éxito", f"Usuario '{e_user.get()}' creado correctamente")
                 self.load_users()
                 dialog.destroy()
             except Exception as e:
-                messagebox.showerror("Error", str(e))
+                messagebox.showerror("Error", f"Error al crear usuario: {str(e)}")
             finally:
                 conn.close()
-                
-        tk.Button(dialog, text="Guardar", command=save).pack(pady=20)
+        
+        # Buttons frame
+        btn_frame = tk.Frame(main_frame)
+        btn_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        # GUARDAR button - Big and visible
+        save_btn = tk.Button(btn_frame, text="GUARDAR USUARIO", command=save,
+                            bg='#4CAF50', fg='white',
+                            font=("Segoe UI", 11, "bold"),
+                            relief='flat', cursor='hand2', padx=20, pady=10)
+        save_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        
+        # CANCELAR button
+        cancel_btn = tk.Button(btn_frame, text="CANCELAR", command=dialog.destroy,
+                              bg='#757575', fg='white',
+                              font=("Segoe UI", 11, "bold"),
+                              relief='flat', cursor='hand2', padx=20, pady=10)
+        cancel_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 0))
 
     def change_password(self):
-        # Reuse existing logic adapted for dialog
+        # Dialog to change password
         dialog = tk.Toplevel(self)
         dialog.title("Cambiar Contraseña")
+        dialog.geometry("400x450")  # Increased from 400 to 450
+        dialog.resizable(False, False)
         
-        tk.Label(dialog, text="Nueva Contraseña:").pack()
-        e_new = tk.Entry(dialog, show="*")
-        e_new.pack()
+        # Main frame with reduced padding
+        main_frame = tk.Frame(dialog, padx=30, pady=20)  # Reduced pady from 30 to 20
+        main_frame.pack(fill=tk.BOTH, expand=True)
         
-        tk.Label(dialog, text="Confirmar:").pack()
-        e_conf = tk.Entry(dialog, show="*")
-        e_conf.pack()
+        # Title with icon
+        title_frame = tk.Frame(main_frame)
+        title_frame.pack(pady=(0, 25))
+        
+        tk.Label(title_frame, text="🔒", font=("Segoe UI Emoji", 32)).pack()
+        tk.Label(title_frame, text="CAMBIAR CONTRASEÑA", font=("Segoe UI", 13, "bold")).pack(pady=(5, 0))
+        
+        # Nueva Contraseña
+        tk.Label(main_frame, text="Nueva Contraseña:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(0, 5))
+        e_new = ttk.Entry(main_frame, show="●", font=("Segoe UI", 11))
+        e_new.pack(fill=tk.X, ipady=10, pady=(0, 15))
+        
+        # Confirmar Contraseña
+        tk.Label(main_frame, text="Confirmar Contraseña:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(0, 5))
+        e_conf = ttk.Entry(main_frame, show="●", font=("Segoe UI", 11))
+        e_conf.pack(fill=tk.X, ipady=10, pady=(0, 25))
         
         def save():
-            if e_new.get() != e_conf.get():
-                messagebox.showerror("Error", "No coinciden")
+            if not e_new.get() or not e_conf.get():
+                messagebox.showerror("Error", "Por favor complete ambos campos")
                 return
+                
+            if e_new.get() != e_conf.get():
+                messagebox.showerror("Error", "Las contraseñas no coinciden")
+                e_conf.delete(0, tk.END)
+                e_conf.focus()
+                return
+                
             conn = get_db_connection()
             conn.execute("UPDATE users SET password = ? WHERE id = ?", (e_new.get(), self.user_data['id']))
             conn.commit()
@@ -198,10 +258,33 @@ class ConfigWindow(tk.Toplevel):
             from database import log_action
             log_action(self.user_data['id'], "Cambiar Contraseña", "El usuario cambió su propia contraseña")
             
-            messagebox.showinfo("Éxito", "Contraseña actualizada")
+            messagebox.showinfo("Éxito", "Contraseña actualizada correctamente")
             dialog.destroy()
-            
-        tk.Button(dialog, text="Actualizar", command=save).pack(pady=10)
+        
+        # Buttons frame
+        btn_frame = tk.Frame(main_frame)
+        btn_frame.pack(fill=tk.X, pady=(5, 0))
+        
+        # GUARDAR button (changed from ACTUALIZAR)
+        save_btn = tk.Button(btn_frame, text="GUARDAR", command=save,
+                            bg='#4CAF50', fg='white',
+                            font=("Segoe UI", 11, "bold"),
+                            relief='flat', cursor='hand2', padx=20, pady=10)
+        save_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        
+        # CANCELAR button
+        cancel_btn = tk.Button(btn_frame, text="CANCELAR", command=dialog.destroy,
+                              bg='#757575', fg='white',
+                              font=("Segoe UI", 11, "bold"),
+                              relief='flat', cursor='hand2', padx=20, pady=10)
+        cancel_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 0))
+        
+        # Focus on first field
+        e_new.focus()
+        
+        # Bind Enter key
+        e_new.bind('<Return>', lambda e: e_conf.focus())
+        e_conf.bind('<Return>', lambda e: save())
 
     def create_company_tab(self):
         tab = tk.Frame(self.notebook)
