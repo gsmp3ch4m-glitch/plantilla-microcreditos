@@ -214,29 +214,29 @@ class ConfigWindow(tk.Toplevel):
         # Dialog to change password
         dialog = tk.Toplevel(self)
         dialog.title("Cambiar Contraseña")
-        dialog.geometry("400x450")  # Increased from 400 to 450
+        dialog.geometry("420x480")  # Increased width and height
         dialog.resizable(False, False)
         
         # Main frame with reduced padding
-        main_frame = tk.Frame(dialog, padx=30, pady=20)  # Reduced pady from 30 to 20
+        main_frame = tk.Frame(dialog, padx=25, pady=15)  # Reduced padding
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Title with icon
         title_frame = tk.Frame(main_frame)
-        title_frame.pack(pady=(0, 25))
+        title_frame.pack(pady=(0, 20))  # Reduced from 25
         
-        tk.Label(title_frame, text="🔒", font=("Segoe UI Emoji", 32)).pack()
-        tk.Label(title_frame, text="CAMBIAR CONTRASEÑA", font=("Segoe UI", 13, "bold")).pack(pady=(5, 0))
+        tk.Label(title_frame, text="🔒", font=("Segoe UI Emoji", 28)).pack()  # Smaller icon
+        tk.Label(title_frame, text="CAMBIAR CONTRASEÑA", font=("Segoe UI", 12, "bold")).pack(pady=(5, 0))
         
         # Nueva Contraseña
         tk.Label(main_frame, text="Nueva Contraseña:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(0, 5))
         e_new = ttk.Entry(main_frame, show="●", font=("Segoe UI", 11))
-        e_new.pack(fill=tk.X, ipady=10, pady=(0, 15))
+        e_new.pack(fill=tk.X, ipady=10, pady=(0, 12))  # Reduced spacing
         
         # Confirmar Contraseña
         tk.Label(main_frame, text="Confirmar Contraseña:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(0, 5))
         e_conf = ttk.Entry(main_frame, show="●", font=("Segoe UI", 11))
-        e_conf.pack(fill=tk.X, ipady=10, pady=(0, 25))
+        e_conf.pack(fill=tk.X, ipady=10, pady=(0, 20))  # Reduced spacing
         
         def save():
             if not e_new.get() or not e_conf.get():
