@@ -36,8 +36,10 @@ class ConfigWindow(tk.Toplevel):
         btn_frame = tk.Frame(tab)
         btn_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        tk.Button(btn_frame, text="Nuevo Usuario", command=self.add_user).pack(side=tk.LEFT, padx=5)
-        tk.Button(btn_frame, text="Cambiar Mi Contraseña", command=self.change_password).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="Nuevo Usuario", command=self.add_user, bg='#4CAF50', fg='white').pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="Editar Usuario", command=self.edit_user, bg='#2196F3', fg='white').pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="Eliminar Usuario", command=self.delete_user, bg='#f44336', fg='white').pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="Cambiar Mi Contraseña", command=self.change_password, bg='#FF9800', fg='white').pack(side=tk.LEFT, padx=5)
         tk.Button(btn_frame, text="Actualizar Lista", command=self.load_users).pack(side=tk.LEFT, padx=5)
         
         self.load_users()
@@ -80,6 +82,16 @@ class ConfigWindow(tk.Toplevel):
         tk.Label(main_frame, text="Nombre Completo:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 2))
         e_name = ttk.Entry(main_frame, font=("Segoe UI", 10))
         e_name.pack(fill=tk.X, ipady=5, pady=(0, 10))
+        
+        # Nombre Analista
+        tk.Label(main_frame, text="Nombre Analista:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 2))
+        e_analyst_name = ttk.Entry(main_frame, font=("Segoe UI", 10))
+        e_analyst_name.pack(fill=tk.X, ipady=5, pady=(0, 10))
+        
+        # Teléfono Analista
+        tk.Label(main_frame, text="Teléfono Analista:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 2))
+        e_analyst_phone = ttk.Entry(main_frame, font=("Segoe UI", 10))
+        e_analyst_phone.pack(fill=tk.X, ipady=5, pady=(0, 10))
         
         # Rol
         tk.Label(main_frame, text="Rol:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 2))
@@ -176,8 +188,8 @@ class ConfigWindow(tk.Toplevel):
             perm_str = ",".join(permissions)
             
             try:
-                conn.execute("INSERT INTO users (username, password, full_name, role, permissions) VALUES (?, ?, ?, ?, ?)",
-                             (e_user.get(), e_pass.get(), e_name.get(), role, perm_str))
+                conn.execute("INSERT INTO users (username, password, full_name, analyst_name, analyst_phone, role, permissions) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                             (e_user.get(), e_pass.get(), e_name.get(), e_analyst_name.get(), e_analyst_phone.get(), role, perm_str))
                 conn.commit()
                 
                 # Log Action
@@ -209,6 +221,160 @@ class ConfigWindow(tk.Toplevel):
                               font=("Segoe UI", 11, "bold"),
                               relief='flat', cursor='hand2', padx=20, pady=10)
         cancel_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 0))
+
+    def edit_user(self):
+        """Editar usuario seleccionado"""
+        selection = self.user_tree.selection()
+        if not selection:
+            messagebox.showwarning("Aviso", "Por favor seleccione un usuario para editar")
+            return
+        
+        # Get selected user data
+        item = self.user_tree.item(selection[0])
+        user_id, username, role, full_name = item['values']
+        
+        # Get full user data including analyst fields
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT analyst_name, analyst_phone FROM users WHERE id = ?", (user_id,))
+        user_row = cursor.fetchone()
+        conn.close()
+        
+        analyst_name = user_row['analyst_name'] if user_row else ''
+        analyst_phone = user_row['analyst_phone'] if user_row else ''
+        
+        # Cannot edit admin user
+        if username == 'admin':
+            messagebox.showwarning("Aviso", "No se puede editar el usuario administrador principal")
+            return
+        
+        # Create edit dialog
+        dialog = tk.Toplevel(self)
+        dialog.title(f"Editar Usuario: {username}")
+        dialog.geometry("450x600")
+        dialog.resizable(False, False)
+        
+        main_frame = tk.Frame(dialog, padx=20, pady=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        tk.Label(main_frame, text=f"EDITAR USUARIO: {username}", font=("Segoe UI", 14, "bold")).pack(pady=(0, 20))
+        
+        # Nombre Completo
+        tk.Label(main_frame, text="Nombre Completo:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 2))
+        e_name = ttk.Entry(main_frame, font=("Segoe UI", 10))
+        e_name.insert(0, full_name or "")
+        e_name.pack(fill=tk.X, ipady=5, pady=(0, 10))
+        
+        # Nombre Analista
+        tk.Label(main_frame, text="Nombre Analista:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 2))
+        e_analyst_name = ttk.Entry(main_frame, font=("Segoe UI", 10))
+        e_analyst_name.insert(0, analyst_name or "")
+        e_analyst_name.pack(fill=tk.X, ipady=5, pady=(0, 10))
+        
+        # Teléfono Analista
+        tk.Label(main_frame, text="Teléfono Analista:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 2))
+        e_analyst_phone = ttk.Entry(main_frame, font=("Segoe UI", 10))
+        e_analyst_phone.insert(0, analyst_phone or "")
+        e_analyst_phone.pack(fill=tk.X, ipady=5, pady=(0, 10))
+        
+        # Rol
+        tk.Label(main_frame, text="Rol:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 2))
+        e_role = ttk.Combobox(main_frame, values=["admin", "caja", "cajero", "analista"], font=("Segoe UI", 10))
+        e_role.set(role)
+        e_role.pack(fill=tk.X, ipady=5, pady=(0, 15))
+        
+        # Nueva Contraseña (opcional)
+        tk.Label(main_frame, text="Nueva Contraseña (dejar vacío para no cambiar):", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 2))
+        e_pass = ttk.Entry(main_frame, show="●", font=("Segoe UI", 10))
+        e_pass.pack(fill=tk.X, ipady=5, pady=(0, 15))
+        
+        def save():
+            if not e_name.get():
+                messagebox.showerror("Error", "El nombre completo es obligatorio")
+                return
+            
+            conn = get_db_connection()
+            try:
+                if e_pass.get():
+                    conn.execute("UPDATE users SET full_name = ?, analyst_name = ?, analyst_phone = ?, role = ?, password = ? WHERE id = ?",
+                                (e_name.get(), e_analyst_name.get(), e_analyst_phone.get(), e_role.get(), e_pass.get(), user_id))
+                else:
+                    conn.execute("UPDATE users SET full_name = ?, analyst_name = ?, analyst_phone = ?, role = ? WHERE id = ?",
+                                (e_name.get(), e_analyst_name.get(), e_analyst_phone.get(), e_role.get(), user_id))
+                
+                conn.commit()
+                
+                from database import log_action
+                log_action(self.user_data['id'], "Editar Usuario", f"Usuario editado: {username}")
+                
+                messagebox.showinfo("Éxito", "Usuario actualizado correctamente")
+                self.load_users()
+                dialog.destroy()
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al actualizar usuario: {str(e)}")
+            finally:
+                conn.close()
+        
+        # Buttons
+        btn_frame = tk.Frame(main_frame)
+        btn_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        save_btn = tk.Button(btn_frame, text="GUARDAR CAMBIOS", command=save,
+                            bg='#4CAF50', fg='white',
+                            font=("Segoe UI", 11, "bold"),
+                            relief='flat', cursor='hand2', padx=20, pady=10)
+        save_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        
+        cancel_btn = tk.Button(btn_frame, text="CANCELAR", command=dialog.destroy,
+                              bg='#757575', fg='white',
+                              font=("Segoe UI", 11, "bold"),
+                              relief='flat', cursor='hand2', padx=20, pady=10)
+        cancel_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 0))
+
+    def delete_user(self):
+        """Eliminar usuario seleccionado"""
+        selection = self.user_tree.selection()
+        if not selection:
+            messagebox.showwarning("Aviso", "Por favor seleccione un usuario para eliminar")
+            return
+        
+        # Get selected user data
+        item = self.user_tree.item(selection[0])
+        user_id, username, role, full_name = item['values']
+        
+        # Cannot delete admin user
+        if username == 'admin':
+            messagebox.showerror("Error", "No se puede eliminar el usuario administrador principal")
+            return
+        
+        # Cannot delete yourself
+        if user_id == self.user_data['id']:
+            messagebox.showerror("Error", "No puede eliminar su propio usuario")
+            return
+        
+        # Confirm deletion
+        if not messagebox.askyesno("Confirmar Eliminación", 
+                                   f"¿Está seguro de eliminar el usuario '{username}'?\n\n"
+                                   f"Nombre: {full_name}\n"
+                                   f"Rol: {role}\n\n"
+                                   "Esta acción no se puede deshacer."):
+            return
+        
+        # Delete user
+        conn = get_db_connection()
+        try:
+            conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+            conn.commit()
+            
+            from database import log_action
+            log_action(self.user_data['id'], "Eliminar Usuario", f"Usuario eliminado: {username} ({full_name})")
+            
+            messagebox.showinfo("Éxito", f"Usuario '{username}' eliminado correctamente")
+            self.load_users()
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al eliminar usuario: {str(e)}")
+        finally:
+            conn.close()
 
     def change_password(self):
         # Dialog to change password
@@ -295,8 +461,11 @@ class ConfigWindow(tk.Toplevel):
             ('company_name', 'Nombre de la Empresa'),
             ('company_registry', 'Partida Registral'),
             ('company_ruc', 'RUC'),
+            ('company_phone', 'Teléfono Empresa 1'),
+            ('company_phone2', 'Teléfono Empresa 2'),
             ('company_manager', 'Gerente General'),
             ('manager_dni', 'DNI del Gerente'),
+            ('manager_phone', 'Teléfono del Gerente'),
             ('company_address', 'Dirección de la Empresa'),
             ('manager_address', 'Dirección del Gerente')
         ]
@@ -389,9 +558,9 @@ class ConfigWindow(tk.Toplevel):
         self.label_entries = {}
         
         # Helper to create rows
-        def add_module_row(parent, key_vis, key_label, default_name, is_mandatory=False, config_key=None):
+        def add_module_row(parent, key_vis, key_label, default_name, is_mandatory=False, config_key=None, indent=0):
             frame = tk.Frame(parent)
-            frame.pack(fill=tk.X, padx=20, pady=5)
+            frame.pack(fill=tk.X, padx=(20 + indent*20), pady=5)
             
             # Visibility Checkbox
             var = tk.BooleanVar(value=get_setting(key_vis) == '1')
@@ -404,7 +573,7 @@ class ConfigWindow(tk.Toplevel):
             chk.pack(side=tk.LEFT)
             
             # Label Entry
-            tk.Label(frame, text=f"({default_name})", width=20, anchor="w", fg="gray").pack(side=tk.LEFT)
+            tk.Label(frame, text=f"({default_name})", width=25, anchor="w", fg="gray").pack(side=tk.LEFT)
             
             entry = tk.Entry(frame)
             entry.insert(0, get_setting(key_label) or default_name)
@@ -421,15 +590,20 @@ class ConfigWindow(tk.Toplevel):
         add_module_row(scrollable_frame, 'mod_clients_visible', 'label_clients', 'Clientes', True)
         add_module_row(scrollable_frame, 'mod_cash_visible', 'label_cash', 'Caja', True)
         add_module_row(scrollable_frame, 'mod_config_visible', 'label_config', 'Configuración', True)
-        add_module_row(scrollable_frame, 'mod_loan1_visible', 'label_loan1', 'Casa de Empeño', True, 'loan1')
+        
+        # Préstamos Section (New Unified Module)
+        tk.Label(scrollable_frame, text="Módulo de Préstamos", font=("Arial", 10, "bold"), fg="#9C27B0").pack(pady=(15, 5), anchor="w", padx=20)
+        add_module_row(scrollable_frame, 'mod_loans_visible', 'label_loans', 'Préstamos', False)
+        
+        # Sub-modules of Préstamos (indented)
+        tk.Label(scrollable_frame, text="  Tipos de Préstamos:", font=("Arial", 9, "italic"), fg="#666").pack(pady=(5, 2), anchor="w", padx=40)
+        add_module_row(scrollable_frame, 'mod_loan1_visible', 'label_loan1', 'Casa de Empeño', False, 'loan1', indent=1)
+        add_module_row(scrollable_frame, 'mod_loan2_visible', 'label_loan2', 'Préstamo Bancario', False, 'loan2', indent=1)
+        add_module_row(scrollable_frame, 'mod_loan3_visible', 'label_loan3', 'Rapidiario', False, 'loan3', indent=1)
+        add_module_row(scrollable_frame, 'mod_loan4_visible', 'label_loan4', 'Préstamo Congelado', False, 'loan4', indent=1)
         
         # Optional Section
         tk.Label(scrollable_frame, text="Módulos Opcionales", font=("Arial", 10, "bold"), fg="#1976D2").pack(pady=(15, 5), anchor="w", padx=20)
-        add_module_row(scrollable_frame, 'mod_loan2_visible', 'label_loan2', 'Préstamo Bancario', False, 'loan2')
-        add_module_row(scrollable_frame, 'mod_loan3_visible', 'label_loan3', 'Rapidiario', False, 'loan3')
-        add_module_row(scrollable_frame, 'mod_loan4_visible', 'label_loan4', 'Préstamo Congelado', False, 'loan4')
-        add_module_row(scrollable_frame, 'mod_loan5_visible', 'label_loan5', 'Préstamo Personalizado', False, 'loan5')
-        
         add_module_row(scrollable_frame, 'mod_calc_visible', 'label_calc', 'Calculadora')
         add_module_row(scrollable_frame, 'mod_analysis_visible', 'label_analysis', 'Análisis')
         add_module_row(scrollable_frame, 'mod_docs_visible', 'label_docs', 'Documentos')

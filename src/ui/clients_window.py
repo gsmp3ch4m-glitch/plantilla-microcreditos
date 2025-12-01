@@ -192,16 +192,18 @@ class ClientsWindow(tk.Toplevel):
 
         conn = get_db_connection()
         try:
+            # Get current user ID to assign as analyst
+            user_id = self.parent.user_data['id']
+            
             conn.execute("""
-                INSERT INTO clients (dni, first_name, last_name, address, phone, email, work_address, occupation, photo_path)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO clients (dni, first_name, last_name, address, phone, email, work_address, occupation, photo_path, analyst_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (dni, name, lastname, self.entry_address.get("1.0", tk.END).strip(), self.entry_phone.get(), self.entry_email.get(),
-                  self.entry_work_address.get("1.0", tk.END).strip(), self.entry_occupation.get(), self.photo_path))
+                  self.entry_work_address.get("1.0", tk.END).strip(), self.entry_occupation.get(), self.photo_path, user_id))
             conn.commit()
             
             # Log Action
             from database import log_action
-            user_id = self.parent.user_data['id']
             log_action(user_id, "Crear Cliente", f"Cliente creado: {dni} - {name} {lastname}")
 
             messagebox.showinfo("Éxito", "Cliente agregado correctamente")

@@ -46,60 +46,53 @@ class LoginWindow(tk.Toplevel):
         bg_label = tk.Label(self, image=self.bg_photo)
         bg_label.place(x=0, y=0, relwidth=1, relheight=1)
         
-        # Main container - everything on orange background
-        main_frame = tk.Frame(self, bg='#FFB74D', bd=0)
-        main_frame.place(relx=0.5, rely=0.5, anchor='center', width=360)
-        
-        # Logo/Icon - Lock icon
-        logo_label = tk.Label(main_frame, text="🔐", font=("Segoe UI Emoji", 60), 
+        # Logo/Icon - Lock icon - directly on gradient background
+        logo_label = tk.Label(self, text="🔐", font=("Segoe UI Emoji", 60), 
                              bg='#FFB74D', fg='white')
-        logo_label.pack(pady=(20, 15))
+        logo_label.place(relx=0.5, y=80, anchor='center')
         
-        # Company Name - WHITE TEXT on orange background
-        company_label = tk.Label(main_frame, text=company_name, 
+        # Company Name - WHITE TEXT - directly on gradient background
+        company_label = tk.Label(self, text=company_name, 
                                 font=("Segoe UI", 18, "bold"), 
-                                bg='#FFB74D', fg='white')
-        company_label.pack(pady=(0, 10))
+                                bg='#FFB74D', fg='white',
+                                wraplength=400)  # Allow text wrapping for long names
+        company_label.place(relx=0.5, y=180, anchor='center')
         
         # "INICIAR SESIÓN" Title - WHITE TEXT
-        title_label = tk.Label(main_frame, text="INICIAR SESIÓN", 
+        title_label = tk.Label(self, text="INICIAR SESIÓN", 
                               font=("Segoe UI", 13, "bold"), 
                               bg='#FFB74D', fg='white')
-        title_label.pack(pady=(0, 30))
-        
-        # Form container
-        form_frame = tk.Frame(main_frame, bg='#FFB74D')
-        form_frame.pack(padx=30, fill=tk.X)
+        title_label.place(relx=0.5, y=230, anchor='center')
         
         # Usuario label - WHITE TEXT
-        user_label = tk.Label(form_frame, text="Usuario:", 
+        user_label = tk.Label(self, text="Usuario:", 
                              font=("Segoe UI", 11, "bold"), 
                              bg='#FFB74D', fg='white')
-        user_label.pack(anchor='w', pady=(0, 5))
+        user_label.place(x=45, y=280, anchor='w')
         
         # Usuario entry - WHITE BACKGROUND
-        self.user_entry = ttk.Entry(form_frame, font=("Segoe UI", 11))
-        self.user_entry.pack(fill=tk.X, ipady=8, pady=(0, 20))
+        self.user_entry = ttk.Entry(self, font=("Segoe UI", 11))
+        self.user_entry.place(x=45, y=310, width=360, height=35)
         self.user_entry.focus()
         
         # Contraseña label - WHITE TEXT
-        pass_label = tk.Label(form_frame, text="Contraseña:", 
+        pass_label = tk.Label(self, text="Contraseña:", 
                              font=("Segoe UI", 11, "bold"), 
                              bg='#FFB74D', fg='white')
-        pass_label.pack(anchor='w', pady=(0, 5))
+        pass_label.place(x=45, y=365, anchor='w')
         
         # Contraseña entry - WHITE BACKGROUND
-        self.pass_entry = ttk.Entry(form_frame, show="●", font=("Segoe UI", 11))
-        self.pass_entry.pack(fill=tk.X, ipady=8, pady=(0, 30))
+        self.pass_entry = ttk.Entry(self, show="●", font=("Segoe UI", 11))
+        self.pass_entry.place(x=45, y=395, width=360, height=35)
         
         # Login button - BLUE
-        login_btn = tk.Button(form_frame, text="INICIAR SESIÓN", 
+        login_btn = tk.Button(self, text="INICIAR SESIÓN", 
                              command=self.login,
                              bg='#2196F3', fg='white',
                              font=("Segoe UI", 12, "bold"),
                              relief='flat', cursor='hand2',
                              padx=20, pady=12)
-        login_btn.pack(fill=tk.X)
+        login_btn.place(x=45, y=460, width=360, height=50)
         
         # Bind Enter key
         self.user_entry.bind('<Return>', lambda e: self.pass_entry.focus())

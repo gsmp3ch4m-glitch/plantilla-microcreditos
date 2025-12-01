@@ -1,0 +1,16 @@
+--- Loans Table ---
+(0, 'id', 'INTEGER', 0, None, 1)
+(1, 'client_id', 'INTEGER', 0, None, 0)
+(2, 'loan_type', 'TEXT', 1, None, 0)
+(3, 'amount', 'REAL', 1, None, 0)
+(4, 'interest_rate', 'REAL', 0, None, 0)
+(5, 'start_date', 'DATE', 0, None, 0)
+(6, 'end_date', 'DATE', 0, None, 0)
+(7, 'status', 'TEXT', 0, "'active'", 0)
+(8, 'due_date', 'DATE', 0, None, 0)
+(9, 'analyst_id', 'INTEGER', 0, None, 0)
+
+--- Settings Table ---
+(0, 'key', 'TEXT', 0, None, 1)
+(1, 'value', 'TEXT', 0, None, 0)
+(2, 'description', 'TEXT', 0, None, 0)

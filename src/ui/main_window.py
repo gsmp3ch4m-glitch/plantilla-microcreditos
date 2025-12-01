@@ -149,6 +149,20 @@ class MainWindow(tk.Toplevel):
             ("Documentos", "mod_docs_visible", "label_docs"),
         ]
         
+        # Get user role and permissions
+        user_role = self.user_data.get('role', 'user')
+        
+        # Define role-based permissions
+        role_permissions = {
+            'admin': ['all'],  # Admin tiene acceso a todo
+            'caja': ['Caja', 'Clientes', 'Calculadora', 'Documentos'],  # Cajero
+            'cajero': ['Caja', 'Clientes', 'Calculadora', 'Documentos'],  # Cajero (alias)
+            'analista': ['Préstamos', 'Clientes', 'Calculadora', 'Documentos'],  # Analista
+        }
+        
+        # Get allowed modules for this user
+        allowed_modules = role_permissions.get(user_role, [])
+        
         # Get module colors
         module_colors = get_module_colors(self.current_theme)
         
@@ -159,7 +173,11 @@ class MainWindow(tk.Toplevel):
         
         for default_name, visible_key, label_key in modules:
             is_visible = get_setting(visible_key) == '1'
-            if is_visible:
+            
+            # Check if user has permission to see this module
+            has_permission = 'all' in allowed_modules or default_name in allowed_modules
+            
+            if is_visible and has_permission:
                 label = get_setting(label_key) or default_name
                 icon = get_module_icon(default_name)
                 color = module_colors.get(default_name, '#2196F3')
@@ -196,7 +214,7 @@ class MainWindow(tk.Toplevel):
             messagebox.showinfo("Info", f"Módulo {module_name} seleccionado")
 
     def show_about(self):
-        messagebox.showinfo("Acerca de", "Sistema de Casa de Empeño y Microcréditos\\nVersión 1.0")
+        messagebox.showinfo("Acerca de", "Sistema de Casa de Empeño y Microcréditos\\nVersión 2.1")
 
     def logout(self):
         self.destroy()

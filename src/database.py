@@ -31,6 +31,8 @@ def init_db():
             password TEXT NOT NULL,
             role TEXT NOT NULL,
             full_name TEXT,
+            analyst_name TEXT,
+            analyst_phone TEXT,
             permissions TEXT -- Comma separated list of allowed modules, or 'all'
         )
     ''')
@@ -41,6 +43,13 @@ def init_db():
     except sqlite3.OperationalError:
         cursor.execute("ALTER TABLE users ADD COLUMN permissions TEXT")
         cursor.execute("UPDATE users SET permissions = 'all' WHERE role = 'admin'")
+    
+    # Check if analyst fields exist (for migration)
+    try:
+        cursor.execute("SELECT analyst_name FROM users LIMIT 1")
+    except sqlite3.OperationalError:
+        cursor.execute("ALTER TABLE users ADD COLUMN analyst_name TEXT")
+        cursor.execute("ALTER TABLE users ADD COLUMN analyst_phone TEXT")
     
     # Clients table
     cursor.execute('''
@@ -96,6 +105,18 @@ def init_db():
         cursor.execute("ALTER TABLE loans ADD COLUMN due_date DATE")
         cursor.execute("ALTER TABLE loans ADD COLUMN status TEXT DEFAULT 'active'")
 
+    # Migration for Frozen Loans and Refinancing
+    try:
+        cursor.execute("SELECT refinance_count FROM loans LIMIT 1")
+    except sqlite3.OperationalError:
+        cursor.execute("ALTER TABLE loans ADD COLUMN refinance_count INTEGER DEFAULT 0")
+        cursor.execute("ALTER TABLE loans ADD COLUMN parent_loan_id INTEGER")
+        cursor.execute("ALTER TABLE loans ADD COLUMN frozen_amount REAL DEFAULT 0")
+        cursor.execute("ALTER TABLE loans ADD COLUMN admin_fee REAL DEFAULT 0")
+        cursor.execute("ALTER TABLE loans ADD COLUMN sales_expense REAL DEFAULT 0")
+        cursor.execute("ALTER TABLE loans ADD COLUMN sale_price REAL DEFAULT 0")
+        cursor.execute("ALTER TABLE loans ADD COLUMN frozen_date DATE")
+
     # Pawn Details table (Collateral)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS pawn_details (
@@ -109,6 +130,16 @@ def init_db():
             FOREIGN KEY (loan_id) REFERENCES loans (id) ON DELETE CASCADE
         )
     ''')
+
+    # Migration for pawn_details
+    try:
+        cursor.execute("SELECT item_type FROM pawn_details LIMIT 1")
+    except sqlite3.OperationalError:
+        cursor.execute("ALTER TABLE pawn_details ADD COLUMN item_type TEXT")
+        cursor.execute("ALTER TABLE pawn_details ADD COLUMN brand TEXT")
+        cursor.execute("ALTER TABLE pawn_details ADD COLUMN characteristics TEXT")
+        cursor.execute("ALTER TABLE pawn_details ADD COLUMN condition TEXT")
+        cursor.execute("ALTER TABLE pawn_details ADD COLUMN market_value REAL")
 
     # Transactions table (Caja)
     cursor.execute('''
@@ -137,9 +168,26 @@ def init_db():
             status TEXT DEFAULT 'pending', -- 'pending', 'paid', 'partial', 'overdue'
             paid_amount REAL DEFAULT 0,
             payment_date DATE,
+            payment_method TEXT DEFAULT 'efectivo', -- 'efectivo', 'yape', 'deposito'
             FOREIGN KEY (loan_id) REFERENCES loans (id) ON DELETE CASCADE
         )
     ''')
+    
+    # Migrations for existing tables
+    try:
+        cursor.execute("SELECT payment_method FROM installments LIMIT 1")
+    except sqlite3.OperationalError:
+        cursor.execute("ALTER TABLE installments ADD COLUMN payment_method TEXT DEFAULT 'efectivo'")
+    
+    try:
+        cursor.execute("SELECT analyst_id FROM clients LIMIT 1")
+    except sqlite3.OperationalError:
+        cursor.execute("ALTER TABLE clients ADD COLUMN analyst_id INTEGER")
+    
+    try:
+        cursor.execute("SELECT analyst_id FROM loans LIMIT 1")
+    except sqlite3.OperationalError:
+        cursor.execute("ALTER TABLE loans ADD COLUMN analyst_id INTEGER")
 
     # Settings table
     cursor.execute('''
@@ -158,7 +206,12 @@ def init_db():
         ('company_manager', '', 'Gerente General'),
         ('manager_dni', '', 'DNI del Gerente'),
         ('company_address', 'Av. Principal 123', 'Dirección de la Empresa'),
+        ('company_phone', '999 999 999', 'Teléfono de la Empresa'),
+        ('company_phone2', '', 'Teléfono de la Empresa 2'),
+        ('manager_phone', '', 'Teléfono del Gerente'),
         ('manager_address', '', 'Dirección del Gerente'),
+        ('analyst_name', 'Analista', 'Nombre del Analista'),
+        ('analyst_phone', '999 999 999', 'Teléfono del Analista'),
         # Interests moved to another module or kept in DB but not shown in Company tab
         ('interest_pawn', '5.0', 'Tasa de Interés - Empeño (%)'),
         ('interest_bank', '10.0', 'Tasa de Interés - Bancario (%)'),
@@ -233,6 +286,20 @@ def init_db():
     if not cursor.fetchone():
         cursor.execute('INSERT INTO users (username, password, role, full_name, permissions) VALUES (?, ?, ?, ?, ?)',
                        ('admin', 'admin123', 'admin', 'Administrador Principal', 'all'))
+
+    # Migration: Update existing loans with analyst_id from clients
+    # This fixes old loans that were created before the analyst_id column existed
+    cursor.execute("""
+        UPDATE loans 
+        SET analyst_id = (SELECT analyst_id FROM clients WHERE clients.id = loans.client_id)
+        WHERE analyst_id IS NULL
+    """)
+    
+    # Force fix: If any client still has NULL analyst_id, assign to admin (id 1)
+    cursor.execute("UPDATE clients SET analyst_id = 1 WHERE analyst_id IS NULL")
+    
+    # Force fix: If any loan still has NULL analyst_id, assign to admin (id 1)
+    cursor.execute("UPDATE loans SET analyst_id = 1 WHERE analyst_id IS NULL")
 
     conn.commit()
     conn.close()

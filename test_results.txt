@@ -1,0 +1,50 @@
+﻿============================================================
+PRUEBAS DE C┴LCULO DE PR╔STAMOS
+============================================================
+
+1. RAPIDIARIO - PrÚstamo de S/ 1000 al 5% (inicio: Lunes 2 Dic 2025)
+------------------------------------------------------------
+   Fecha inicio: 02/12/2025 (Mar)
+   Fecha vencimiento: 01/01/2026
+   DÝas laborables: 26 dÝas
+   Total interÚs: S/ 50.00
+   Total a pagar: S/ 1050.00
+   N·mero de cuotas: 26
+   Monto por cuota: S/ 40.38
+
+2. RAPIDIARIO - PrÚstamo de S/ 1000 al 5% (inicio: Viernes 5 Dic 2025)
+------------------------------------------------------------
+   Fecha inicio: 05/12/2025 (Vie)
+   DÝas laborables: 26 dÝas (deberÝa ser ~25)
+   Total a pagar: S/ 1050.00
+   Monto por cuota: S/ 40.38
+
+3. CASA DE EMPEÐO - PrÚstamo de S/ 2000 al 5% (inicio: 15 Ene 2025)
+------------------------------------------------------------
+   Fecha inicio: 15/01/2025
+   Fecha vencimiento: 15/02/2025 (debe ser 15/02/2025)
+   Total interÚs: S/ 100.00
+   Total a pagar: S/ 2100.00
+   N·mero de cuotas: 1
+
+4. PR╔STAMO BANCARIO - S/ 1000 a 3 meses (inicio: 1 Dic 2025)
+------------------------------------------------------------
+   Fecha inicio: 01/12/2025
+   Tasa mensual: 12.00% (base 10% + incremento)
+   Total interÚs: S/ 360.00
+   Total a pagar: S/ 1360.00
+   N·mero de cuotas: 3
+   Monto por cuota: S/ 453.33
+   Capital por cuota: S/ 333.33
+   InterÚs por cuota: S/ 120.00
+
+5. PR╔STAMO BANCARIO - S/ 1000 a 6 meses (inicio: 1 Dic 2025)
+------------------------------------------------------------
+   Tasa mensual: 15.00% (aumenta con plazo)
+   Total interÚs: S/ 900.00
+   Total a pagar: S/ 1900.00
+   Monto por cuota: S/ 316.67
+
+============================================================
+TODAS LAS PRUEBAS COMPLETADAS
+============================================================
