@@ -24,6 +24,7 @@ class DocumentsMenuWindow(ModernWindow):
             ("Empeño Programado", "📅", "#2196F3", self.open_scheduled_pawn_contract),
             ("Notificaciones", "📢", "#F44336", self.open_notifications),
             ("Declaración Jurada", "📜", "#607D8B", self.open_affidavit),
+            ("Constancia de No Adeudo", "✅", "#4CAF50", self.open_no_debt_certificate),
         ]
         
         row = 0
@@ -58,3 +59,8 @@ class DocumentsMenuWindow(ModernWindow):
     def open_affidavit(self):
         from ui.affidavit_window import AffidavitWindow
         AffidavitWindow(self)
+
+    def open_no_debt_certificate(self):
+        from ui.no_debt_certificate_window import NoDebtCertificateWindow
+        NoDebtCertificateWindow(self)
+

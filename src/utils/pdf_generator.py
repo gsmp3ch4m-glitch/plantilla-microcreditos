@@ -48,16 +48,25 @@ class PDFGenerator:
         # Transactions Table Header
         y = height - 7*cm
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(2*cm, y, "Hora")
-        c.drawString(4*cm, y, "Tipo")
-        c.drawString(6*cm, y, "Categoría")
-        c.drawString(10*cm, y, "Descripción")
-        c.drawString(17*cm, y, "Monto")
+        c.drawString(1.5*cm, y, "Hora")
+        c.drawString(3*cm, y, "Tipo")
+        c.drawString(5*cm, y, "Cliente")
+        c.drawString(9*cm, y, "Categoría")
+        c.drawString(12.5*cm, y, "Descripción")
+        c.drawString(17.5*cm, y, "Monto")
         
-        c.line(2*cm, y - 0.2*cm, width - 2*cm, y - 0.2*cm)
+        c.line(1.5*cm, y - 0.2*cm, width - 1.5*cm, y - 0.2*cm)
         
         y -= 0.8*cm
         c.setFont("Helvetica", 9)
+        
+        # Category Map
+        cat_map = {
+            'payment': 'Pago Cuota',
+            'loan_disbursement': 'Desembolso',
+            'petty_cash_deposit': 'Depósito Caja Chica',
+            'petty_cash_withdrawal': 'Retiro Caja Chica'
+        }
         
         for trans in data['details']:
             if y < 3*cm: # New Page
@@ -67,15 +76,27 @@ class PDFGenerator:
             # trans is expected to be a dict or sqlite3.Row
             t_time = trans['date'][11:16] if len(trans['date']) > 16 else trans['date']
             t_type = "Ingreso" if trans['type'] == 'income' else "Egreso"
-            t_cat = trans['category']
-            t_desc = trans['description'][:35] + "..." if len(trans['description']) > 35 else trans['description']
+            
+            # Category Translation
+            t_cat_raw = trans['category']
+            t_cat = cat_map.get(t_cat_raw, t_cat_raw)[:15] # Truncate category
+            
+            t_desc = trans['description'][:30] + "..." if len(trans['description']) > 30 else trans['description']
             t_amount = f"S/ {trans['amount']:,.2f}"
             
-            c.drawString(2*cm, y, t_time)
-            c.drawString(4*cm, y, t_type)
-            c.drawString(6*cm, y, t_cat)
-            c.drawString(10*cm, y, t_desc)
-            c.drawRightString(width - 2*cm, y, t_amount)
+            # Client Name
+            if trans['first_name']:
+                t_client = f"{trans['first_name']} {trans['last_name']}"
+                t_client = t_client[:20] + "..." if len(t_client) > 20 else t_client
+            else:
+                t_client = "-"
+            
+            c.drawString(1.5*cm, y, t_time)
+            c.drawString(3*cm, y, t_type)
+            c.drawString(5*cm, y, t_client)
+            c.drawString(9*cm, y, t_cat)
+            c.drawString(12.5*cm, y, t_desc)
+            c.drawRightString(width - 1.5*cm, y, t_amount)
             
             y -= 0.6*cm
             
@@ -915,6 +936,106 @@ class PDFGenerator:
         doc.build(story)
         return filepath
 
+    def generate_no_debt_certificate(self, filepath, data):
+        """
+        Generates No Debt Certificate (Constancia de No Adeudo) for paid pawn loans.
+        data: dict with keys: client_name, client_dni, loan_amount, loan_amount_text, 
+              collateral_description, collateral_items (list), date
+        """
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
+        from reportlab.lib.units import cm
+        from datetime import datetime
+        
+        doc = SimpleDocTemplate(filepath, pagesize=A4,
+                                rightMargin=2.5*cm, leftMargin=2.5*cm,
+                                topMargin=2.5*cm, bottomMargin=2.5*cm)
+        
+        styles = getSampleStyleSheet()
+        styles.add(ParagraphStyle(name='Justify', alignment=TA_JUSTIFY, fontName='Helvetica', fontSize=11, leading=16))
+        styles.add(ParagraphStyle(name='Center', alignment=TA_CENTER, fontName='Helvetica-Bold', fontSize=13, leading=16))
+        styles.add(ParagraphStyle(name='Bold', fontName='Helvetica-Bold', fontSize=11, leading=16))
+        
+        story = []
+        
+        # Title
+        story.append(Paragraph("CONSTANCIA DE NO ADEUDO", styles['Center']))
+        story.append(Paragraph("PRESTAMO CON GARANTIA PRENDARIA", styles['Center']))
+        story.append(Spacer(1, 20))
+        
+        # Get date components
+        date_obj = data.get('date', datetime.now())
+        if isinstance(date_obj, str):
+            date_obj = datetime.now()
+        
+        months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", 
+                  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+        
+        dia = date_obj.day
+        mes = months[date_obj.month - 1]
+        anio = date_obj.year
+        
+        # Introduction
+        intro = f"""En la ciudad de Ayacucho, a los <b>{dia}</b> días del mes de <b>{mes}</b> del año <b>{anio}</b>, la empresa <b>CORPORACION EL CANGURO S.A.C.</b>, inscrita en la Partida Electrónica N° <b>11191281</b> del Registro Público de Ayacucho, con RUC N° <b>20614279924</b>, con domicilio legal en <b>Av. Mariscal Cáceres N° 850, Segundo Piso, Huamanga, Ayacucho</b>, representada por su Gerente General, señor <b>Edgar Tucno Pacotaype</b>, identificado con DNI N° <b>45303843</b>, con domicilio en <b>Jr. Puno Mz. G Lt. 10, La Florida, Carmen Alto, Ayacucho</b>,"""
+        story.append(Paragraph(intro, styles['Justify']))
+        story.append(Spacer(1, 14))
+        
+        # HACE CONSTAR QUE
+        story.append(Paragraph("HACE CONSTAR QUE:", styles['Bold']))
+        story.append(Spacer(1, 12))
+        
+        # Client and loan details
+        content = f"""El señor(a) <b>{data['client_name']}</b>, identificado con DNI N° <b>{data['client_dni']}</b>, contrajo con nuestra empresa un préstamo por la suma de <b>S/. {data['loan_amount']:.2f} ({data['loan_amount_text']})</b>, dejando como garantía prendaria: <b>{data['collateral_description']}</b> con las siguientes características:"""
+        story.append(Paragraph(content, styles['Justify']))
+        story.append(Spacer(1, 10))
+        
+        # List collateral items
+        for item in data.get('collateral_items', []):
+            story.append(Paragraph(f"• {item}", styles['Justify']))
+            story.append(Spacer(1, 4))
+        
+        story.append(Spacer(1, 12))
+        
+        # Payment declaration
+        payment_decl = """A la fecha, el cliente ha cancelado en su totalidad la deuda contraída, no manteniendo obligación pendiente alguna con CORPORACION EL CANGURO S.A.C. por dicho concepto."""
+        story.append(Paragraph(payment_decl, styles['Justify']))
+        story.append(Spacer(1, 12))
+        
+        # Conclusion
+        conclusion = """En consecuencia, la empresa otorga la presente Constancia de No Adeudo, liberando la garantía prendaria mencionada y quedando el cliente en pleno derecho de disponer del bien."""
+        story.append(Paragraph(conclusion, styles['Justify']))
+        story.append(Spacer(1, 12))
+        
+        # Purpose
+        purpose = """Se expide la presente para los fines que el interesado estime convenientes."""
+        story.append(Paragraph(purpose, styles['Justify']))
+        story.append(Spacer(1, 40))
+        
+        # Signatures
+        sig_data = [
+            ["_____________________________", "_____________________________"],
+            ["", ""],
+            ["Edgar Tucno Pacotaype", ""],
+            ["Gerente General", ""],
+            ["DNI N° 45303843", f"DNI N° {data['client_dni']}"],
+            ["CORPORACION EL CANGURO S.A.C.", ""]
+        ]
+        
+        sig_table = Table(sig_data, colWidths=[8*cm, 8*cm])
+        sig_table.setStyle(TableStyle([
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+            ('FONTSIZE', (0,0), (-1,-1), 10),
+            ('TOPPADDING', (0,0), (-1,-1), 3),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ]))
+        
+        story.append(sig_table)
+        
+        doc.build(story)
+        return filepath
+
 
 
 def generate_payment_schedule(filepath, loan_data, client_data, installments, pawn_data=None):
@@ -1456,6 +1577,166 @@ def generate_payment_receipt(filepath, payment_data, client_data, loan_data, use
         
         doc.build(story)
         return filepath
+
+def generate_detailed_payment_receipt(filepath, payment_data, client_data, loan_data, user_data, extra_info=None):
+    """
+    Generates a detailed Payment Receipt PDF.
+    extra_info: dict with keys 'total_debt', 'total_paid', 'remaining_balance', 'next_payment_date', 'final_due_date'
+    """
+    from reportlab.lib.pagesizes import A5
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.units import cm
+    from reportlab.lib import colors
+    from reportlab.platypus import Table, TableStyle
+    
+    c = canvas.Canvas(filepath, pagesize=A5)
+    width, height = A5
+    
+    # --- Header ---
+    c.setFillColor(colors.HexColor('#4285F4')) # Google Blue roughly
+    c.rect(0, height - 2.5*cm, width, 2.5*cm, fill=True, stroke=False)
+    
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(width/2, height - 1.0*cm, "CORPORACION EL CANGURO S.A.C.")
+    c.setFont("Helvetica", 10)
+    c.drawCentredString(width/2, height - 1.5*cm, "RUC: 20614279924")
+    c.drawCentredString(width/2, height - 1.9*cm, "Av. MARISCAL CASERES 850")
+    
+    # --- Title ---
+    c.setFillColor(colors.black)
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(width/2, height - 3.5*cm, "RECIBO DE PAGO")
+    
+    # --- Receipt Details ---
+    c.setFont("Helvetica", 9)
+    c.drawString(1.5*cm, height - 4.2*cm, f"Recibo N°: REC-{payment_data.get('transaction_id', '???')}")
+    c.drawRightString(width - 1.5*cm, height - 4.2*cm, f"Fecha: {payment_data.get('date', '')}")
+    
+    y = height - 5.0*cm
+    
+    # --- Client Data ---
+    c.setFont("Helvetica-Bold", 10)
+    c.setFillColor(colors.HexColor('#4285F4'))
+    c.drawString(1.5*cm, y, "DATOS DEL CLIENTE")
+    c.setFillColor(colors.black)
+    y -= 0.5*cm
+    
+    c.setFont("Helvetica", 9)
+    c.drawString(2*cm, y, f"Nombre: {client_data.get('first_name', '')} {client_data.get('last_name', '')}")
+    y -= 0.4*cm
+    c.drawString(2*cm, y, f"DNI: {client_data.get('dni', '')}")
+    y -= 0.8*cm
+    
+    # --- Loan Data ---
+    c.setFont("Helvetica-Bold", 10)
+    c.setFillColor(colors.HexColor('#4285F4'))
+    c.drawString(1.5*cm, y, "DATOS DEL PRÉSTAMO")
+    c.setFillColor(colors.black)
+    y -= 0.5*cm
+    
+    c.setFont("Helvetica", 9)
+    c.drawString(2*cm, y, f"Préstamo ID: {loan_data.get('id', '')}")
+    y -= 0.4*cm
+    loan_type_map = {'rapid': 'Rapidiario', 'rapidiario': 'Rapidiario', 'empeno': 'Empeño', 'bancario': 'Bancario'}
+    loan_type = loan_type_map.get(loan_data.get('loan_type', ''), loan_data.get('loan_type', '').capitalize())
+    c.drawString(2*cm, y, f"Tipo: {loan_type}")
+    y -= 0.4*cm
+    c.drawString(2*cm, y, f"Monto Original: S/ {loan_data.get('amount', 0):.2f}")
+    y -= 0.8*cm
+
+    # --- Payment Details Box ---
+    c.setStrokeColor(colors.black)
+    c.setLineWidth(1)
+    
+    # Details Table
+    details_data = [
+        ['DETALLES DEL PAGO', ''],
+        ['Monto Pagado:', f"S/ {payment_data.get('amount', 0):.2f}"],
+        ['Concepto:', payment_data.get('description', '')],
+        ['Método de Pago:', payment_data.get('payment_method', '').capitalize()]
+    ]
+    
+    t = Table(details_data, colWidths=[4*cm, 7*cm])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#E3F2FD')), # Header bg
+        ('SPAN', (0,0), (-1,0)), # Span header
+        ('ALIGN', (0,0), (-1,0), 'CENTER'),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,0), 10),
+        ('BOTTOMPADDING', (0,0), (-1,0), 6),
+        ('TOPPADDING', (0,0), (-1,0), 6),
+        
+        ('FONTNAME', (0,1), (0,-1), 'Helvetica'),
+        ('FONTSIZE', (0,1), (-1,-1), 9),
+        ('ALIGN', (0,1), (0,-1), 'LEFT'),
+        
+        ('FONTNAME', (1,1), (1,1), 'Helvetica-Bold'), # Amount bold
+        ('TEXTCOLOR', (1,1), (1,1), colors.HexColor('#4CAF50')), # Green amount
+        ('FONTSIZE', (1,1), (1,1), 12),
+        
+        ('BOX', (0,0), (-1,-1), 1, colors.black),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.grey),
+    ]))
+    
+    t_w, t_h = t.wrapOn(c, width, height)
+    t.drawOn(c, (width - t_w)/2, y - t_h)
+    
+    y = y - t_h - 1.0*cm
+    
+    # --- Debt Summary Section (Requested Features) ---
+    if extra_info:
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(1.5*cm, y, "ESTADO DE CUENTA:")
+        y -= 0.6*cm
+        
+        # Summary Data
+        summary_data = [
+            # Header Row
+            ['Deuda Total', 'Total Pagado', 'SALDO PENDIENTE'],
+            # Value Row
+            [f"S/ {extra_info.get('total_debt', 0):.2f}", 
+             f"S/ {extra_info.get('total_paid', 0):.2f}",
+             f"S/ {extra_info.get('remaining_balance', 0):.2f}"]
+        ]
+        
+        sum_table = Table(summary_data, colWidths=[3.5*cm, 3.5*cm, 3.5*cm])
+        sum_table.setStyle(TableStyle([
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 8),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('TEXTCOLOR', (2,0), (2,1), colors.red), # Pending red
+            ('LINEBELOW', (0,0), (-1,0), 1, colors.black),
+        ]))
+        st_w, st_h = sum_table.wrapOn(c, width, height)
+        sum_table.drawOn(c, (width - st_w)/2, y - st_h)
+        
+        y = y - st_h - 0.8*cm
+        
+        # Dates
+        c.setFont("Helvetica", 8)
+        if extra_info.get('next_payment_date'):
+            c.drawString(1.5*cm, y, f"Próxima Fecha de Pago: {extra_info['next_payment_date']}")
+        
+        if extra_info.get('final_due_date'):
+            c.drawRightString(width - 1.5*cm, y, f"Vencimiento Final: {extra_info['final_due_date']}")
+            
+        y -= 0.6*cm
+
+    # --- Footer ---
+    y = 2.0*cm
+    c.setLineWidth(0.5)
+    c.line(1.5*cm, y, 6.5*cm, y)
+    c.setFont("Helvetica", 7)
+    c.drawCentredString(4.0*cm, y - 0.3*cm, "Firma del Cliente")
+    
+    c.line(width - 6.5*cm, y, width - 1.5*cm, y)
+    c.drawCentredString(width - 4.0*cm, y - 0.3*cm, f"Atendido por: {user_data.get('username', 'Cajero')}")
+    
+    c.drawCentredString(width/2, 0.8*cm, "¡Gracias por su puntualidad!")
+    
+    c.save()
+    return filepath
 
 
 

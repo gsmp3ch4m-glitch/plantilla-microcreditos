@@ -4,6 +4,7 @@ from database import get_db_connection, log_action
 from datetime import datetime
 from utils.pdf_generator import PDFGenerator
 from utils.settings_manager import get_setting
+from utils.loan_payment_manager import calculate_outstanding_balance, get_rapidiario_schedule
 import os
 import subprocess
 import platform
@@ -264,11 +265,12 @@ class CashWindow(tk.Toplevel):
         tk.Label(right_panel, text="Movimientos del Día", font=("Segoe UI", 14, "bold"), bg='white').pack(pady=10)
         
         # Treeview
-        columns = ("hora", "tipo", "categoria", "metodo", "monto", "descripcion")
+        columns = ("hora", "tipo", "cliente", "categoria", "metodo", "monto", "descripcion")
         self.tree = ttk.Treeview(right_panel, columns=columns, show="headings", height=20)
         
         self.tree.heading("hora", text="Hora")
         self.tree.heading("tipo", text="Tipo")
+        self.tree.heading("cliente", text="Cliente")
         self.tree.heading("categoria", text="Categoría")
         self.tree.heading("metodo", text="Método Pago")
         self.tree.heading("monto", text="Monto")
@@ -276,6 +278,7 @@ class CashWindow(tk.Toplevel):
         
         self.tree.column("hora", width=80)
         self.tree.column("tipo", width=80)
+        self.tree.column("cliente", width=180)
         self.tree.column("categoria", width=120)
         self.tree.column("metodo", width=100)
         self.tree.column("monto", width=100)
@@ -331,23 +334,42 @@ class CashWindow(tk.Toplevel):
         
         today = datetime.now().strftime("%Y-%m-%d")
         cursor.execute("""
-            SELECT * FROM transactions 
-            WHERE cash_session_id = ? AND date(date) = ?
-            ORDER BY date DESC
+            SELECT t.*, c.first_name, c.last_name 
+            FROM transactions t
+            LEFT JOIN loans l ON t.loan_id = l.id
+            LEFT JOIN clients c ON l.client_id = c.id
+            WHERE t.cash_session_id = ? AND date(t.date) = ?
+            ORDER BY t.date DESC
         """, (self.current_session['id'], today))
         
         rows = cursor.fetchall()
         conn.close()
+        
+        # Translation map
+        cat_map = {
+            'payment': 'Pago Cuota',
+            'loan_disbursement': 'Desembolso',
+            'petty_cash_deposit': 'Depósito Caja Chica',
+            'petty_cash_withdrawal': 'Retiro Caja Chica'
+        }
         
         for row in rows:
             hora = row['date'][11:16] if len(row['date']) > 16 else ""
             tipo = "Ingreso" if row['type'] == 'income' else "Egreso"
             tag = "income" if row['type'] == 'income' else "expense"
             
+            # Translate category
+            raw_cat = row['category']
+            categoria = cat_map.get(raw_cat, raw_cat.capitalize())
+            
+            # Client Name
+            cliente = f"{row['first_name']} {row['last_name']}" if row['first_name'] else "-"
+            
             self.tree.insert("", 0, values=(
                 hora,
                 tipo,
-                row['category'],
+                cliente,
+                categoria,
                 row['payment_method'] or 'N/A',
                 f"S/ {row['amount']:.2f}",
                 row['description']
@@ -529,9 +551,15 @@ class CashWindow(tk.Toplevel):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Get all transactions for this session
-        cursor.execute("SELECT * FROM transactions WHERE cash_session_id = ? ORDER BY date ASC", 
-                      (self.current_session['id'],))
+        # Get all transactions for this session with Client Name
+        cursor.execute("""
+            SELECT t.*, c.first_name, c.last_name 
+            FROM transactions t
+            LEFT JOIN loans l ON t.loan_id = l.id
+            LEFT JOIN clients c ON l.client_id = c.id
+            WHERE t.cash_session_id = ? 
+            ORDER BY t.date ASC
+        """, (self.current_session['id'],))
         transactions = cursor.fetchall()
         
         # Calculate final balance
@@ -582,7 +610,7 @@ class LoanPaymentForm(tk.Toplevel):
         self.session_id = session_id
         self.callback = callback
         self.title("Registrar Pago")
-        self.geometry("550x650")
+        self.geometry("650x750")
         self.configure(bg='white')
         self.transient(parent)
         self.grab_set()
@@ -597,33 +625,59 @@ class LoanPaymentForm(tk.Toplevel):
         
         tk.Label(header_frame, text="💵 Registrar Pago", font=("Segoe UI", 20, "bold"), bg="#4CAF50", fg="white").pack(side=tk.LEFT, padx=20)
         
-        # Main Container
-        main_container = tk.Frame(self, bg='white', padx=30, pady=20)
-        main_container.pack(fill=tk.BOTH, expand=True)
+        # Scrollable frame
+        container = tk.Frame(self, bg='white')
+        container.pack(fill=tk.BOTH, expand=True)
+        
+        canvas = tk.Canvas(container, bg='white', highlightthickness=0)
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        
+        self.main_container = tk.Frame(canvas, bg='white', padx=30, pady=20)
+        
+        canvas.create_window((0, 0), window=self.main_container, anchor='nw')
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        def on_frame_configure(event=None):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        
+        self.main_container.bind('<Configure>', on_frame_configure)
+        
+        # Mouse wheel scrolling
+        def on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        canvas.bind_all("<MouseWheel>", on_mousewheel)
+        
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
         # 1. Client Search Section
-        tk.Label(main_container, text="1. Buscar Cliente", font=("Segoe UI", 11, "bold"), bg='white', fg='#555').pack(anchor='w')
+        tk.Label(self.main_container, text="1. Buscar Cliente", font=("Segoe UI", 11, "bold"), bg='white', fg='#555').pack(anchor='w')
         
-        search_frame = tk.Frame(main_container, bg='white')
+        search_frame = tk.Frame(self.main_container, bg='white')
         search_frame.pack(fill=tk.X, pady=(5, 10))
         
         self.entry_search = tk.Entry(search_frame, font=("Segoe UI", 12), relief=tk.SOLID, bd=1)
         self.entry_search.pack(fill=tk.X, ipady=5)
         self.entry_search.bind('<KeyRelease>', self.search_clients)
         
-        self.listbox_clients = tk.Listbox(main_container, height=3, font=("Segoe UI", 10), relief=tk.SOLID, bd=1)
+        self.listbox_clients = tk.Listbox(self.main_container, height=3, font=("Segoe UI", 10), relief=tk.SOLID, bd=1)
         self.listbox_clients.pack(fill=tk.X, pady=(0, 15))
         self.listbox_clients.bind('<<ListboxSelect>>', self.load_client_loans)
         
         # 2. Loan Selection
-        tk.Label(main_container, text="2. Seleccionar Préstamo", font=("Segoe UI", 11, "bold"), bg='white', fg='#555').pack(anchor='w')
+        tk.Label(self.main_container, text="2. Seleccionar Préstamo", font=("Segoe UI", 11, "bold"), bg='white', fg='#555').pack(anchor='w')
         
-        self.combo_loan = ttk.Combobox(main_container, state='readonly', font=("Segoe UI", 11))
+        self.combo_loan = ttk.Combobox(self.main_container, state='readonly', font=("Segoe UI", 11))
         self.combo_loan.pack(fill=tk.X, pady=(5, 15), ipady=3)
         self.combo_loan.bind('<<ComboboxSelected>>', self.on_loan_select)
         
-        # Pawn Options (Dynamic)
-        self.frame_pawn_options = tk.Frame(main_container, bg='#F5F5F5', padx=15, pady=10, relief=tk.RIDGE, bd=1)
+        # --- DYNAMIC INFO CONTAINER ---
+        self.dynamic_container = tk.Frame(self.main_container, bg='white')
+        self.dynamic_container.pack(fill=tk.X)
+        
+        # Pawn Options (Dynamic - re-parented)
+        self.frame_pawn_options = tk.Frame(self.dynamic_container, bg='#F5F5F5', padx=15, pady=10, relief=tk.RIDGE, bd=1)
         
         tk.Label(self.frame_pawn_options, text="Opciones de Empeño", font=("Segoe UI", 10, "bold"), bg='#F5F5F5', fg='#333').pack(anchor='w', pady=(0,5))
         
@@ -639,10 +693,46 @@ class LoanPaymentForm(tk.Toplevel):
                                     command=self.calculate_total, font=("Segoe UI", 10), bg='#F5F5F5')
         self.chk_mos.pack(anchor='w', pady=5)
         
-        # 3. Payment Details
-        tk.Label(main_container, text="3. Detalles del Pago", font=("Segoe UI", 11, "bold"), bg='white', fg='#555').pack(anchor='w')
+        # Loan Info Panel (re-parented)
+        self.frame_loan_info = tk.Frame(self.dynamic_container, bg='#E3F2FD', padx=15, pady=10, relief=tk.SOLID, bd=1)
         
-        details_frame = tk.Frame(main_container, bg='white')
+        tk.Label(self.frame_loan_info, text="💰 Información del Préstamo", font=("Segoe UI", 10, "bold"), bg='#E3F2FD', fg='#1976D2').pack(anchor='w', pady=(0,8))
+        
+        info_grid = tk.Frame(self.frame_loan_info, bg='#E3F2FD')
+        info_grid.pack(fill=tk.X)
+        
+        # Capital
+        tk.Label(info_grid, text="Capital:", font=("Segoe UI", 9), bg='#E3F2FD', anchor='w').grid(row=0, column=0, sticky='w', pady=2)
+        self.lbl_capital = tk.Label(info_grid, text="S/ 0.00", font=("Segoe UI", 9, "bold"), bg='#E3F2FD', anchor='e')
+        self.lbl_capital.grid(row=0, column=1, sticky='e', pady=2, padx=(10,0))
+        
+        # Interest
+        tk.Label(info_grid, text="Intereses:", font=("Segoe UI", 9), bg='#E3F2FD', anchor='w').grid(row=1, column=0, sticky='w', pady=2)
+        self.lbl_interest = tk.Label(info_grid, text="S/ 0.00", font=("Segoe UI", 9, "bold"), bg='#E3F2FD', fg='#F57C00', anchor='e')
+        self.lbl_interest.grid(row=1, column=1, sticky='e', pady=2, padx=(10,0))
+        
+        # Total Debt
+        tk.Label(info_grid, text="Total Adeudado:", font=("Segoe UI", 10, "bold"), bg='#E3F2FD', anchor='w').grid(row=2, column=0, sticky='w', pady=2)
+        self.lbl_total_debt = tk.Label(info_grid, text="S/ 0.00", font=("Segoe UI", 11, "bold"), bg='#E3F2FD', fg='#D32F2F', anchor='e')
+        self.lbl_total_debt.grid(row=2, column=1, sticky='e', pady=2, padx=(10,0))
+        
+        # Paid
+        tk.Label(info_grid, text="Ya Pagado:", font=("Segoe UI", 9), bg='#E3F2FD', anchor='w').grid(row=3, column=0, sticky='w', pady=2)
+        self.lbl_paid = tk.Label(info_grid, text="S/ 0.00", font=("Segoe UI", 9), bg='#E3F2FD', fg='#388E3C', anchor='e')
+        self.lbl_paid.grid(row=3, column=1, sticky='e', pady=2, padx=(10,0))
+        
+        # Balance
+        tk.Label(info_grid, text="Saldo Pendiente:", font=("Segoe UI", 10, "bold"), bg='#E3F2FD', anchor='w').grid(row=4, column=0, sticky='w', pady=(5,2))
+        self.lbl_balance = tk.Label(info_grid, text="S/ 0.00", font=("Segoe UI", 12, "bold"), bg='#E3F2FD', fg='#1976D2', anchor='e')
+        self.lbl_balance.grid(row=4, column=1, sticky='e', pady=(5,2), padx=(10,0))
+        
+        # Create Rapidiario Alert Frame (hidden by default)
+        self.frame_rapidiario_alert = tk.Frame(self.dynamic_container, padx=15, pady=10, relief=tk.SOLID, bd=2)
+        
+        # 3. Payment Details
+        tk.Label(self.main_container, text="3. Detalles del Pago", font=("Segoe UI", 11, "bold"), bg='white', fg='#555').pack(anchor='w', pady=(10,5))
+        
+        details_frame = tk.Frame(self.main_container, bg='white')
         details_frame.pack(fill=tk.X, pady=(5, 0))
         
         # Amount
@@ -670,18 +760,295 @@ class LoanPaymentForm(tk.Toplevel):
         self.selected_loan = None
         self.selected_client = None
 
+    def update_info_labels(self, info):
+        self.lbl_capital.config(text=f"S/ {info['loan_amount']:.2f}")
+        self.lbl_interest.config(text=f"S/ {info['interest_amount']:.2f}")
+        self.lbl_total_debt.config(text=f"S/ {info['total_debt']:.2f}")
+        self.lbl_paid.config(text=f"S/ {info['total_paid']:.2f}")
+        self.lbl_balance.config(text=f"S/ {info['balance']:.2f}")
+
     def on_loan_select(self, event=None):
         idx = self.combo_loan.current()
         if idx >= 0:
             self.selected_loan = self.loans[idx]
             
-            # Show/Hide Pawn Options
-            if self.selected_loan['loan_type'] == 'empeno':
-                self.frame_pawn_options.pack(after=self.combo_loan, pady=5)
-                self.calculate_total()
+        # Reset dynamic container widgets
+        self.frame_pawn_options.pack_forget()
+        self.frame_loan_info.pack_forget()
+        self.frame_rapidiario_alert.pack_forget()
+        
+        try:
+            loan_id = self.combo_loan.get().split(' - ')[0].replace('ID:', '')
+            # Find selected loan data
+            self.selected_loan = next((l for l in self.loans if str(l['id']) == loan_id), None)
+            
+            if not self.selected_loan:
+                return
+            
+            loan_type = self.selected_loan['loan_type']
+            
+            # Show Pawn Options if applicable
+            if loan_type == 'empeno':
+                self.frame_pawn_options.pack(fill=tk.X, pady=(0, 10))
+            
+            # For Rapidiario (rapid or rapidiario), show schedule
+            if loan_type in ['rapid', 'rapidiario']:
+                schedule = get_rapidiario_schedule(self.selected_loan['id'])
+                
+                if schedule:
+                    # Calculate details
+                    total_installments = len(schedule['all_installments'])
+                    paid_installments = len(schedule['paid'])
+                    overdue_count = len(schedule['overdue'])
+                    has_today = schedule['today'] is not None
+                    
+                    total_overdue = schedule['total_overdue']
+                    total_pending = schedule['total_pending']
+                    
+                    # Update info panel for Rapidiario
+                    self.lbl_capital.config(text=f"S/ {self.selected_loan['amount']:.2f}")
+                    
+                    # Calculate interest from installments
+                    total_debt = sum(float(i['amount']) for i in schedule['all_installments'])
+                    interest = total_debt - float(self.selected_loan['amount'])
+                    self.lbl_interest.config(text=f"S/ {interest:.2f}")
+                    
+                    self.lbl_total_debt.config(text=f"S/ {total_debt:.2f}")
+                    
+                    # Calculate paid
+                    total_paid = sum(float(i['paid_amount'] or 0) for i in schedule['all_installments'])
+                    self.lbl_paid.config(text=f"S/ {total_paid:.2f}")
+                    
+                    self.lbl_balance.config(text=f"S/ {total_pending:.2f}")
+                    
+                    # Show info panel FIRST
+                    self.frame_loan_info.pack(fill=tk.X, pady=(0, 10))
+                    
+                    # Show special message for overdue
+                    if overdue_count > 0 or has_today:
+                        # Configure existing frame
+                        self.frame_rapidiario_alert.config(bg='#FFEBEE')
+                        
+                        # Clear previous content
+                        for widget in self.frame_rapidiario_alert.winfo_children():
+                            widget.destroy()
+                        
+                        # Build detailed message
+                        alert_msg = f"⚠️ CRONOGRAMA RAPIDIARIO - Préstamo #{loan_id}\n"
+                        alert_msg += "─" * 60 + "\n"
+                        
+                        if overdue_count > 0:
+                            overdue_numbers = ", ".join([f"#{i['number']}" for i in schedule['overdue'][:5]])
+                            if len(schedule['overdue']) > 5:
+                                overdue_numbers += f" (+{len(schedule['overdue'])-5} más)"
+                            alert_msg += f"\n❌ {overdue_count} cuota(s) VENCIDA(S): {overdue_numbers}\n"
+                            alert_msg += f"   Monto vencido: S/ {sum(i['balance'] for i in schedule['overdue']):.2f}\n"
+                        
+                        if has_today:
+                            alert_msg += f"\n⏰ Cuota #{schedule['today']['number']} VENCE HOY\n"
+                            alert_msg += f"   Monto: S/ {schedule['today']['balance']:.2f}\n"
+                        
+                        alert_msg += f"\n💰 TOTAL A PAGAR HOY: S/ {total_overdue:.2f}"
+                        alert_msg += f"\n⏳ Saldo total pendiente: S/ {total_pending:.2f}"
+                        
+                        tk.Label(self.frame_rapidiario_alert, text=alert_msg, 
+                                font=("Segoe UI", 10), bg='#FFEBEE', fg='#C62828', 
+                                justify='left').pack(anchor='w')
+                        
+                        # Add schedule table button
+                        tk.Button(self.frame_rapidiario_alert, text="📅 Ver Cronograma Completo",
+                                 command=lambda: self.show_rapidiario_schedule(schedule),
+                                 bg='#F44336', fg='white', font=("Segoe UI", 9),
+                                 relief=tk.FLAT, cursor='hand2', padx=10, pady=5).pack(pady=(10,0))
+                        
+                        # Show Alert Frame SECOND
+                        self.frame_rapidiario_alert.pack(fill=tk.X, pady=(0, 10))
+                        
+                        # Pre-fill with overdue amount
+                        if hasattr(self, 'entry_amount'):
+                            self.entry_amount.delete(0, tk.END)
+                            self.entry_amount.insert(0, f"{total_overdue:.2f}")
+                    else:
+                        # No overdue, but still show schedule info
+                        self.frame_rapidiario_alert.config(bg='#E8F5E9')
+                        
+                        for widget in self.frame_rapidiario_alert.winfo_children():
+                            widget.destroy()
+                        
+                        alert_msg = f"✅ CRONOGRAMA RAPIDIARIO - Préstamo #{loan_id}\n"
+                        alert_msg += f"\n✅ ¡Al día con los pagos!\n"
+                        alert_msg += f"📊 Progreso: {paid_installments}/{total_installments} cuotas pagadas\n"
+                        
+                        if schedule['pending']:
+                            next_cuota = schedule['pending'][0]
+                            alert_msg += f"\n📅 Próxima cuota #{next_cuota['number']}: {next_cuota['due_date']}\n"
+                            alert_msg += f"   Monto: S/ {next_cuota['amount']:.2f}"
+                        
+                        tk.Label(self.frame_rapidiario_alert, text=alert_msg, 
+                                font=("Segoe UI", 10), bg='#E8F5E9', fg='#2E7D32', 
+                                justify='left').pack(anchor='w')
+                        
+                        tk.Button(self.frame_rapidiario_alert, text="📅 Ver Cronograma Completo",
+                                 command=lambda: self.show_rapidiario_schedule(schedule),
+                                 bg='#4CAF50', fg='white', font=("Segoe UI", 9),
+                                 relief=tk.FLAT, cursor='hand2', padx=10, pady=5).pack(pady=(10,0))
+                        
+                        self.frame_rapidiario_alert.pack(fill=tk.X, pady=(0, 10))
+                        
+                        # Suggest regular payment
+                        if hasattr(self, 'entry_amount'):
+                            self.entry_amount.delete(0, tk.END)
+                            if schedule['pending']:
+                                next_payment = schedule['pending'][0]['amount']
+                                self.entry_amount.insert(0, f"{next_payment:.2f}")
+                else:
+                    # No schedule found - show warning
+                    self.frame_rapidiario_alert.config(bg='#FFF3E0')
+                    for widget in self.frame_rapidiario_alert.winfo_children():
+                        widget.destroy()
+                    
+                    tk.Label(self.frame_rapidiario_alert, text="⚠️ PRÉSTAMO SIN CRONOGRAMA", 
+                            font=("Segoe UI", 10), bg='#FFF3E0', fg='#E65100').pack()
+                    
+                    self.frame_rapidiario_alert.pack(fill=tk.X, pady=(0, 10))
+                    
+                    # Still show basic info
+                    balance_info = calculate_outstanding_balance(self.selected_loan['id'])
+                    if balance_info:
+                        self.update_info_labels(balance_info)
+                        self.frame_loan_info.pack(fill=tk.X, pady=(0, 10))
+                        
             else:
-                self.frame_pawn_options.pack_forget()
-                self.entry_amount.delete(0, tk.END)
+                # Other loan types
+                balance_info = calculate_outstanding_balance(self.selected_loan['id'])
+                if balance_info:
+                    self.update_info_labels(balance_info)
+                    self.frame_loan_info.pack(fill=tk.X, pady=(0, 10))
+                    
+                    if hasattr(self, 'entry_amount'):
+                        self.entry_amount.delete(0, tk.END)
+                        self.entry_amount.insert(0, f"{balance_info['balance']:.2f}")
+                    else:
+                        self.frame_loan_info.pack(after=self.combo_loan, pady=(10,10), fill=tk.X)
+                    
+                    # Pre-fill amount with balance (suggested full payment)
+                    if hasattr(self, 'entry_amount'):
+                        self.entry_amount.delete(0, tk.END)
+                        self.entry_amount.insert(0, f"{balance_info['balance']:.2f}")
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            messagebox.showerror("Error", f"Error al seleccionar préstamo: {str(e)}")
+
+    def show_rapidiario_schedule(self, schedule):
+        """Shows complete Rapidiario schedule in popup window"""
+        dialog = tk.Toplevel(self)
+        dialog.title("Cronograma Rapidiario")
+        dialog.geometry("700x500")
+        dialog.transient(self)
+        dialog.grab_set()
+        
+        # Header
+        header = tk.Frame(dialog, bg="#F44336", height=60)
+        header.pack(fill=tk.X)
+        header.pack_propagate(False)
+        
+        tk.Label(header, text="📅 Cronograma de Pagos Diarios", 
+                font=("Segoe UI", 16, "bold"), bg="#F44336", fg="white").pack(side=tk.LEFT, padx=20, pady=15)
+        
+        # Main content
+        content = tk.Frame(dialog, bg='white', padx=20, pady=20)
+        content.pack(fill=tk.BOTH, expand=True)
+        
+        # Summary
+        summary_frame = tk.Frame(content, bg='#F5F5F5', padx=15, pady=10, relief=tk.RIDGE, bd=2)
+        summary_frame.pack(fill=tk.X, pady=(0,15))
+        
+        total_inst = len(schedule['all_installments'])
+        paid_inst = len(schedule['paid'])
+        overdue_inst = len(schedule['overdue'])
+        
+        summary_text = f"Total cuotas: {total_inst}  |  Pagadas: {paid_inst}  |  Vencidas: {overdue_inst}  |  Pendiente: S/ {schedule['total_pending']:.2f}"
+        
+        tk.Label(summary_frame, text=summary_text, font=("Segoe UI", 10, "bold"), 
+                bg='#F5F5F5', fg='#333').pack()
+        
+        # Table
+        table_frame = tk.Frame(content, bg='white')
+        table_frame.pack(fill=tk.BOTH, expand=True)
+        
+        columns = ('N°', 'Fecha', 'Monto', 'Pagado', 'Estado')
+        tree = ttk.Treeview(table_frame, columns=columns, show='headings', height=15)
+        
+        for col in columns:
+            tree.heading(col, text=col)
+        
+        tree.column('N°', width=50, anchor='center')
+        tree.column('Fecha', width=120, anchor='center')
+        tree.column('Monto', width=100, anchor='e')
+        tree.column('Pagado', width=100, anchor='e')
+        tree.column('Estado', width=150, anchor='center')
+        
+        # Style
+        style = ttk.Style()
+        style.configure("Treeview", font=("Segoe UI", 9), rowheight=25)
+        style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"))
+        
+        # Add data
+        from datetime import date
+        today = date.today()
+        
+        for inst in schedule['all_installments']:
+            inst_dict = dict(inst)
+            due_date_str = inst['due_date']
+            due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+            
+            paid_amount = float(inst['paid_amount'] or 0)
+            inst_amount = float(inst['amount'])
+            
+            # Determine status and tag
+            if inst['status'] == 'paid':
+                status_text = "✅ Pagada"
+                tag = 'paid'
+            elif due_date < today and paid_amount < inst_amount:
+                status_text = "❌ Vencida"
+                tag = 'overdue'
+            elif due_date == today:
+                status_text = "⏰ Hoy"
+                tag = 'today'
+            elif inst['status'] == 'partial':
+                status_text = "⚠️ Parcial"
+                tag = 'partial'
+            else:
+                status_text = "⏳ Pendiente"
+                tag = 'pending'
+            
+            tree.insert('', 'end', values=(
+                inst['number'],
+                due_date_str,
+                f"S/ {inst_amount:.2f}",
+                f"S/ {paid_amount:.2f}",
+                status_text
+            ), tags=(tag,))
+        
+        # Configure tags
+        tree.tag_configure('paid', background='#C8E6C9')
+        tree.tag_configure('overdue', background='#FFCDD2')
+        tree.tag_configure('today', background='#FFE082')
+        tree.tag_configure('partial', background='#FFF9C4')
+        tree.tag_configure('pending', background='#E3F2FD')
+        
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        tree.configure(yscrollcommand=scrollbar.set)
+        
+        # Close button
+        tk.Button(dialog, text="Cerrar", command=dialog.destroy, 
+                 bg='#757575', fg='white', font=("Segoe UI", 10, "bold"),
+                 relief=tk.FLAT, cursor='hand2', padx=30, pady=10).pack(pady=15)
 
     def calculate_total(self, event=None):
         if not self.selected_loan: return
@@ -776,6 +1143,10 @@ class LoanPaymentForm(tk.Toplevel):
         
         try:
             amount = float(self.entry_amount.get())
+            if amount <= 0:
+                messagebox.showerror("Error", "El monto debe ser mayor a cero")
+                return
+                
             loan = self.selected_loan
             client = self.selected_client
             payment_method = self.combo_method.get()
@@ -787,51 +1158,134 @@ class LoanPaymentForm(tk.Toplevel):
             # MOS Authorization
             if is_pawn and not has_mos:
                 # Require Admin or Password
-                # For simplicity, let's just ask for a password if not admin
                 user_role = self.master.user_data.get('role')
                 if user_role != 'admin':
                     pwd = tk.simpledialog.askstring("Autorización", "Ingrese contraseña de administrador para omitir MOS:", show='*')
-                    if pwd != "admin123": # Hardcoded for now, should check DB
+                    if pwd != "admin123":  # TODO: Check DB
                         messagebox.showerror("Error", "Contraseña incorrecta")
                         return
 
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            
+            # Build description
             desc = f"Pago préstamo #{loan['id']}"
             if is_refinance:
                 desc += " (Refinanciación)"
-                # Update Loan Start Date to Today (Extend period)
-                cursor.execute("UPDATE loans SET start_date = DATE('now') WHERE id = ?", (loan['id'],))
-            
             if has_mos:
                 desc += " + MOS"
             
-            # Record transaction
-            cursor.execute("""
-                INSERT INTO transactions (type, category, amount, description, payment_method, cash_session_id, loan_id)
-                VALUES ('income', 'payment', ?, ?, ?, ?, ?)
-            """, (amount, desc, payment_method, self.session_id, loan['id']))
+            # Handle refinancing (extend period)
+            if is_refinance:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("UPDATE loans SET start_date = DATE('now') WHERE id = ?", (loan['id'],))
+                conn.commit()
+                conn.close()
             
-            transaction_id = cursor.lastrowid
+            # Process payment using appropriate method
+            user_id = self.master.user_data.get('id', 1)
             
-            conn.commit()
-            conn.close()
+            # Use specialized Rapidiario payment for rapid loans
+            if loan['loan_type'] in ['rapid', 'rapidiario']:
+                from utils.loan_payment_manager import apply_rapidiario_payment
+                
+                result = apply_rapidiario_payment(
+                    loan_id=loan['id'],
+                    amount=amount,
+                    payment_method=payment_method,
+                    session_id=self.session_id,
+                    user_id=user_id,
+                    description=desc
+                )
+            else:
+                # Use general payment manager for other loans
+                from utils.loan_payment_manager import process_loan_payment
+                
+                result = process_loan_payment(
+                    loan_id=loan['id'],
+                    amount=amount,
+                    payment_method=payment_method,
+                    session_id=self.session_id,
+                    user_id=user_id,
+                    description=desc
+                )
+            
+            if not result['success']:
+                messagebox.showerror("Error", result.get('error', 'Error desconocido'))
+                return
+            
+            # Show success message with details
+            if 'balance_info' in result:
+                balance_info = result['balance_info']
+                balance_before = result.get('balance_before', 0)
+            else:
+                # Construct balance_info for Rapidiario or other methods that return different structure
+                balance_info = {
+                    'total_debt': 0, # Not readily available in rapid response, calculated differently
+                    'balance': result.get('remaining_balance', 0),
+                    'has_installments': True,
+                    'installments_paid': 0, # Will display count from Installments message
+                    'installments_total': 0
+                }
+                balance_before = 0 # Not returned by rapid payment
+            
+            loan_paid_off = result['loan_paid_off']
+            
+            # Prepare detailed message
+            if loan_paid_off:
+                msg = f"✅ ¡PRÉSTAMO CANCELADO!\n\n"
+                msg += f"Cliente: {client['first_name']} {client['last_name']}\n"
+                msg += f"Préstamo: #{loan['id']}\n"
+                msg += f"Monto Pagado: S/ {amount:.2f}\n"
+                msg += f"Total Cancelado: S/ {balance_info['total_debt']:.2f}\n\n"
+                msg += "✅ El préstamo ha sido cancelado en su totalidad"
+                
+                # Ask if wants to generate certificate
+                response = messagebox.askyesno("Préstamo Cancelado", msg + "\n\n¿Desea generar la Constancia de No Adeudo?")
+                
+                if response:
+                    # Open no debt certificate window
+                    try:
+                        from ui.no_debt_certificate_window import NoDebtCertificateWindow
+                        NoDebtCertificateWindow(self.master)
+                    except Exception as e:
+                        print(f"Error opening certificate window: {e}")
+            else:
+                msg = f"✅ Pago Registrado Exitosamente\n\n"
+                msg += f"Cliente: {client['first_name']} {client['last_name']}\n"
+                msg += f"Préstamo: #{loan['id']}\n"
+                msg += f"Monto Pagado: S/ {amount:.2f}\n"
+                
+                if balance_before > 0:
+                     msg += f"Saldo Anterior: S/ {balance_before:.2f}\n"
+                
+                msg += f"Saldo Restante: S/ {balance_info['balance']:.2f}\n\n"
+                
+                if 'message' in result:
+                    msg += f"Detalle: {result['message']}"
+                elif balance_info.get('has_installments'):
+                    msg += f"Estado: Préstamo Activo ({balance_info['installments_paid']}/{balance_info['installments_total']} cuotas pagadas)"
+                else:
+                    msg += f"Estado: Préstamo Activo"
+                
+                messagebox.showinfo("Pago Registrado", msg)
             
             # Show receipt dialog
+            transaction_id = result['transaction_id']
             self.show_receipt_dialog(transaction_id, amount, payment_method, client, loan, desc)
             
+            # Refresh parent window and close
             self.callback()
             self.destroy()
             
         except ValueError:
             messagebox.showerror("Error", "Monto inválido")
         except Exception as e:
-            messagebox.showerror("Error", str(e))
+            messagebox.showerror("Error", f"Error al procesar pago: {str(e)}")
+            import traceback
+            traceback.print_exc()
     
     def show_receipt_dialog(self, transaction_id, amount, payment_method, client, loan, description):
         """Show dialog with receipt options"""
-        from utils.pdf_generator import generate_payment_receipt
+        from utils.pdf_generator import generate_detailed_payment_receipt
         from pathlib import Path
         from tkinter import filedialog
         import io
@@ -845,18 +1299,69 @@ class LoanPaymentForm(tk.Toplevel):
             'description': description
         }
         
+        # Calculate Extra Info for Receipt
+        extra_info = {}
+        try:
+            # Import explicitly to avoid NameError
+            from utils.loan_payment_manager import calculate_outstanding_balance, get_rapidiario_schedule
+            
+            loan_type = str(loan['loan_type']).lower().strip()
+            
+            if loan_type in ['rapid', 'rapidiario']:
+                schedule = get_rapidiario_schedule(loan['id'])
+                if schedule:
+                    extra_info = {
+                        'total_debt': sum(float(i['amount']) for i in schedule['all_installments']),
+                        'total_paid': sum(float(i['paid_amount'] or 0) for i in schedule['all_installments']),
+                        'remaining_balance': schedule['total_pending'],
+                        'next_payment_date': schedule['pending'][0]['due_date'] if schedule['pending'] else "Pagado",
+                        'final_due_date': schedule['all_installments'][-1]['due_date'] if schedule['all_installments'] else "-"
+                    }
+                else:
+                    print("Debug: Rapidiario schedule is empty")
+            else:
+                info = calculate_outstanding_balance(loan['id'])
+                if info:
+                    # Determine next payment date for other loans
+                    next_date = loan['due_date']
+                    if info['has_installments']:
+                        # Try to find first unpaid installment
+                        conn = get_db_connection()
+                        c = conn.cursor()
+                        c.execute("SELECT due_date FROM installments WHERE loan_id = ? AND status != 'paid' ORDER BY number ASC LIMIT 1", (loan['id'],))
+                        res = c.fetchone()
+                        if res:
+                            next_date = res['due_date']
+                        conn.close()
+
+                    extra_info = {
+                        'total_debt': info['total_debt'],
+                        'total_paid': info['total_paid'],
+                        'remaining_balance': info['balance'],
+                        'next_payment_date': next_date, 
+                        'final_due_date': loan['due_date']
+                    }
+        except Exception as e:
+            print(f"Error calculating extra info: {e}")
+            messagebox.showerror("Warning", f"No se pudo calcular detalles de saldo: {e}")
+        
         # Get user data from parent window
         user_data = self.master.user_data if hasattr(self.master, 'user_data') else {'username': 'Cajero'}
         
         # Create dialog
         dialog = tk.Toplevel(self)
         dialog.title("Recibo de Pago")
-        dialog.geometry("400x300")
+        dialog.geometry("400x350")
         dialog.transient(self)
         dialog.grab_set()
         
         tk.Label(dialog, text="✅ Pago Registrado", font=("Segoe UI", 16, "bold"), fg="#4CAF50").pack(pady=20)
         tk.Label(dialog, text=f"Monto: S/ {amount:.2f}", font=("Segoe UI", 14)).pack(pady=5)
+        
+        if extra_info.get('remaining_balance'):
+             tk.Label(dialog, text=f"Saldo Restante: S/ {extra_info['remaining_balance']:.2f}", 
+                     font=("Segoe UI", 10, "bold"), fg="#C62828").pack(pady=2)
+                     
         tk.Label(dialog, text="¿Desea generar un recibo?", font=("Segoe UI", 11)).pack(pady=10)
         
         btn_frame = tk.Frame(dialog)
@@ -866,11 +1371,13 @@ class LoanPaymentForm(tk.Toplevel):
             try:
                 filename = f"recibo_pago_{transaction_id}.pdf"
                 filepath = os.path.abspath(filename)
-                generate_payment_receipt(filepath, payment_data, dict(client), dict(loan), user_data)
+                generate_detailed_payment_receipt(filepath, payment_data, dict(client), dict(loan), user_data, extra_info)
                 os.startfile(filepath)
                 messagebox.showinfo("Éxito", "Recibo generado y abierto")
             except Exception as e:
                 messagebox.showerror("Error", f"Error al generar recibo: {e}")
+                import traceback
+                traceback.print_exc()
         
         def save_pdf():
             try:
@@ -881,7 +1388,7 @@ class LoanPaymentForm(tk.Toplevel):
                     initialfile=filename
                 )
                 if filepath:
-                    generate_payment_receipt(filepath, payment_data, dict(client), dict(loan), user_data)
+                    generate_detailed_payment_receipt(filepath, payment_data, dict(client), dict(loan), user_data, extra_info)
                     messagebox.showinfo("Éxito", "Recibo guardado correctamente")
                     os.startfile(filepath)
             except Exception as e:
