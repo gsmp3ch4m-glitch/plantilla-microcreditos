@@ -212,15 +212,42 @@ def create_gradient_image(width, height, color1, color2):
 def get_theme_colors(theme_name='light'):
     """Obtiene los colores de un tema específico."""
     themes = {
-        'light': {'gradient_start': '#f5f5f5', 'gradient_end': '#e0e0e0'},
-        'dark': {'gradient_start': '#303030', 'gradient_end': '#424242'},
-        'vivid': {'gradient_start': '#B2DFDB', 'gradient_end': '#80CBC4'},
-        'pro1': {'gradient_start': '#E3F2FD', 'gradient_end': '#BBDEFB'},
-        'pro2': {'gradient_start': '#ECEFF1', 'gradient_end': '#CFD8DC'},
-        'turquesa': {'gradient_start': '#4DD0E1', 'gradient_end': '#00ACC1'},
-        'oscuro': {'gradient_start': '#263238', 'gradient_end': '#37474F'},
-        'claro': {'gradient_start': '#FFFFFF', 'gradient_end': '#F5F5F5'},
-        'morado': {'gradient_start': '#7B1FA2', 'gradient_end': '#9C27B0'}
+        'light': {
+            'primary': '#2196F3', 'secondary': '#FFC107', 'bg': '#f5f5f5', 'text': '#333333',
+            'gradient_start': '#f5f5f5', 'gradient_end': '#e0e0e0'
+        },
+        'dark': {
+            'primary': '#90CAF9', 'secondary': '#FFD54F', 'bg': '#303030', 'text': '#ffffff',
+            'gradient_start': '#303030', 'gradient_end': '#424242'
+        },
+        'vivid': {
+            'primary': '#00796B', 'secondary': '#F57C00', 'bg': '#B2DFDB', 'text': '#333333',
+            'gradient_start': '#B2DFDB', 'gradient_end': '#80CBC4'
+        },
+        'pro1': {
+            'primary': '#0D47A1', 'secondary': '#1976D2', 'bg': '#E3F2FD', 'text': '#000000',
+            'gradient_start': '#E3F2FD', 'gradient_end': '#BBDEFB'
+        },
+        'pro2': {
+            'primary': '#455A64', 'secondary': '#D4AF37', 'bg': '#ECEFF1', 'text': '#263238',
+            'gradient_start': '#ECEFF1', 'gradient_end': '#CFD8DC'
+        },
+        'turquesa': {
+            'primary': '#00ACC1', 'secondary': '#4DD0E1', 'bg': '#4DD0E1', 'text': '#263238',
+            'gradient_start': '#4DD0E1', 'gradient_end': '#00ACC1'
+        },
+        'oscuro': {
+            'primary': '#42A5F5', 'secondary': '#26C6DA', 'bg': '#263238', 'text': '#ECEFF1',
+            'gradient_start': '#263238', 'gradient_end': '#37474F'
+        },
+        'claro': {
+            'primary': '#5C6BC0', 'secondary': '#42A5F5', 'bg': '#FFFFFF', 'text': '#263238',
+            'gradient_start': '#FFFFFF', 'gradient_end': '#F5F5F5'
+        },
+        'morado': {
+            'primary': '#9C27B0', 'secondary': '#BA68C8', 'bg': '#7B1FA2', 'text': '#F3E5F5',
+            'gradient_start': '#7B1FA2', 'gradient_end': '#9C27B0'
+        }
     }
     return themes.get(theme_name, themes['light'])
 

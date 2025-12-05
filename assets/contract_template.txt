@@ -1,0 +1,69 @@
+CONTRATO DE PRÉSTAMO PRENDARIO
+CONTRATO DE PRÉSTAMO DE DINERO CON GARANTÍA PRENDARIA
+En la ciudad de Huamanga, Ayacucho, a los {dia} días del mes de {mes} del año {anio}, se celebra el presente contrato de préstamo de dinero con garantía prendaria, entre las siguientes partes:
+I. PARTES CONTRATANTES
+1.  EL ACREEDOR: CORPORACIÓN EL CANGURO S.A.C., inscrita en la Partida Electrónica N° 11191281 del Registro Público de Ayacucho, con RUC N° 20614279924, con domicilio legal en Av. Mariscal Cáceres N° 850, Segundo Piso, Huamanga, Ayacucho, representada por su Gerente General, señor Edgar Tucno Pacotaype, identificado con DNI N° 45303843, con domicilio en Jr. Puno Mz. G Lt. 10, La Florida, Carmen Alto, Ayacucho, quien en adelante será denominado EL ACREEDOR.
+2.  EL DEUDOR: {cliente_nombre}, identificado con DNI N° {cliente_dni}, con domicilio en {cliente_direccion}, quien en adelante será denominado EL DEUDOR.
+II. OBJETO DEL CONTRATO
+Por el presente contrato, EL ACREEDOR entrega a EL DEUDOR, en calidad de préstamo, la suma de S/ {monto_prestamo} ({monto_texto}), la cual será devuelta por EL DEUDOR en los términos y condiciones establecidos en este contrato. Como garantía del cumplimiento de las obligaciones, EL DEUDOR entrega en prenda el bien descrito en la cláusula tercera, conforme a lo dispuesto en el Código Civil Peruano y la Ley N° 28677, Ley de la Garantía Mobiliaria.
+III. DESCRIPCIÓN DEL BIEN EN PRENDA
+1.  Bien en Garantía: EL DEUDOR entrega en prenda a EL ACREEDOR el siguiente bien:
+{items_descripcion}
+
+2.  Condiciones de la Prenda:
+	•  El bien será custodiado por EL ACREEDOR en un lugar seguro designado por este, y EL DEUDOR autoriza su depósito.
+	•  EL DEUDOR declara ser propietario legítimo del bien y que este se encuentra libre de gravámenes, embargos o cualquier limitación de dominio.
+	•  El bien será devuelto a EL DEUDOR una vez cumplidas íntegramente las obligaciones de pago establecidas en este contrato.
+3.  Registro de la Prenda: La prenda será inscrita en el Registro de Garantías Mobiliarias, conforme a la Ley N° 28677, siendo los costos de inscripción asumidos por EL DEUDOR.
+IV. CONDICIONES DEL PRÉSTAMO
+1.  Monto del Préstamo: El Capital asciende a S/ {monto_prestamo} ({monto_texto}).
+2.  Tasa de Interés y Gastos: El préstamo devengará una tasa de interés mensual de {tasa_interes}%, determinada por el Gerente General de EL ACREEDOR, más un 2% adicional en concepto de gastos administrativos y otros costos asociados, totalizando un costo financiero efectivo mensual de {tasa_total}%. El interés mensual a pagar asciende a S/ {interes_monto} ({interes_texto}). Los gastos adicionales, como costos de custodia, notariales, registrales o legales, serán asumidos íntegramente por EL DEUDOR.
+3.  Plazo del Préstamo: El plazo del préstamo será de 30 días calendario, contados a partir de la fecha de desembolso del Capital.
+4.  Modalidad de Pago: EL DEUDOR se obliga a realizar el pago del Capital, intereses y gastos en una sola cuota al vencimiento del plazo de 30 días, conforme al cronograma de pagos que se adjunta como Anexo 1 al presente contrato. El monto total a pagar al vencimiento es de S/ {total_pagar} ({total_texto}).
+5.  Lugar y Forma de Pago: Los pagos podrán realizarse mediante las siguientes modalidades:
+	•  Pago en Oficina: En el domicilio de EL ACREEDOR, ubicado en Av. Mariscal Cáceres N° 850, Segundo Piso, Huamanga, Ayacucho.
+	•  Pago Físico de Cobranza: A través de agentes de cobranza autorizados por EL ACREEDOR.
+	•  Pago Virtual: Mediante transferencia bancaria o plataformas de pago electrónico indicadas por EL ACREEDOR, cuyos datos serán proporcionados al momento de la suscripción del contrato.
+6.  Comprobantes de Pago: EL ACREEDOR emitirá comprobantes por cada pago recibido, en físico o formato electrónico, según corresponda.
+V. INCUMPLIMIENTO Y MORA
+1.  Plazo de Gracia: En caso EL DEUDOR no cancele la totalidad del Capital, intereses y gastos al vencimiento del plazo de 30 días, se otorgará un plazo de gracia de 30 días calendario adicionales para regularizar el pago. Durante este periodo, EL DEUDOR incurrirá en una mora diaria del 0.1% sobre el saldo pendiente, equivalente a S/ {mora_diaria} ({mora_texto}) por día, acumulable hasta el cumplimiento total de la obligación o el vencimiento del plazo de gracia.
+2.  Comunicación Obligatoria: EL DEUDOR deberá comunicar por escrito a EL ACREEDOR cualquier dificultad para cumplir con los pagos o solicitar una ampliación del plazo, acompañada del pago de los intereses y moras correspondientes.
+3.  Ejecución de la Prenda: Si EL DEUDOR no cancela la totalidad del Capital, intereses, moras y gastos dentro de los 60 días calendario (30 días iniciales más 30 días de gracia), y no se ha comunicado ni solicitado una ampliación, EL ACREEDOR procederá a ejecutar la prenda mediante la venta del bien en remate público, conforme a lo establecido en el Código Civil y la Ley N° 28677. Los fondos obtenidos se destinarán a cubrir:
+	•  El Capital adeudado.
+	•  Los intereses generados.
+	•  Las moras acumuladas.
+	•  Los gastos administrativos y costos asociados al remate (notariales, registrales, legales, etc.).
+Cualquier saldo restante será entregado a EL DEUDOR. Si el producto del remate no cubre la totalidad de la deuda, EL DEUDOR seguirá siendo responsable por el saldo pendiente.
+4.  Reporte a Centrales de Riesgo: En caso de incumplimiento, EL DEUDOR será reportado a las centrales de riesgo crediticio, lo que podrá afectar su historial crediticio.
+VI. OBLIGACIONES DE LAS PARTES
+1.  Obligaciones de EL ACREEDOR:
+	•  Entregar el Capital a EL DEUDOR en la fecha de suscripción del presente contrato.
+	•  Custodiar el bien en prenda en condiciones adecuadas, evitando su deterioro por causas imputables.
+	•  Facilitar los medios de pago (oficina, cobranza física o virtual) y emitir comprobantes por cada pago recibido.
+	•  Devolver el bien en prenda a EL DEUDOR una vez cumplidas íntegramente las obligaciones de pago.
+
+2.  Obligaciones de EL DEUDOR:
+	•  Pagar puntualmente el Capital, intereses y gastos al vencimiento del plazo.
+	•  Entregar el bien en prenda en buen estado y libre de gravámenes.
+	•  Informar oportunamente a EL ACREEDOR sobre cualquier dificultad para cumplir con las obligaciones de pago.
+	•  Asumir todos los gastos adicionales que se generen por el incumplimiento del presente contrato, incluyendo costos de remate, legales, notariales o registrales.
+VII. CLÁUSULAS ADICIONALES
+1.  Cesión de Derechos: EL ACREEDOR podrá ceder los derechos derivados del presente contrato a terceros, previa notificación escrita a EL DEUDOR.
+2.  Modificaciones: Cualquier modificación al presente contrato deberá realizarse por escrito y contar con la firma de ambas partes.
+3.  Legislación Aplicable: Este contrato se rige por las disposiciones del Código Civil Peruano, la Ley N° 28677 de la Garantía Mobiliaria y demás normas aplicables de la legislación peruana.
+4.  Resolución de Controversias: Las partes acuerdan someter cualquier controversia derivada del presente contrato a la jurisdicción de los juzgados y tribunales de Huamanga, Ayacucho, renunciando a cualquier otro fuero que pudiera corresponderles.
+VIII. DECLARACIONES
+EL DEUDOR declara que:
+•  Es propietario legítimo del bien entregado en prenda y que este se encuentra libre de gravámenes, embargos o cualquier limitación de dominio.
+•  Los fondos recibidos serán utilizados para fines lícitos.
+•  Cuenta con la capacidad económica para cumplir con las obligaciones asumidas en el presente contrato.
+IX. VIGENCIA
+El presente contrato entrará en vigencia a partir de la fecha de su suscripción y permanecerá vigente hasta el cumplimiento total de las obligaciones de EL DEUDOR o la ejecución de la prenda, según corresponda.
+En señal de conformidad, las partes firman el presente contrato en dos ejemplares de igual tenor y valor, en la ciudad de Huamanga, Ayacucho, a los {dia} días del mes de {mes} del año {anio}.
+
+
+_____________________________________                                              ____________________________________
+        Edgar Tucno Pacotaype                                                         
+                Gerente General                                                                       DNI N°
+   Corporación El Canguro S.A.C.
+                 DNI N° 4530384

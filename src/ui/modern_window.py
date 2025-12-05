@@ -58,10 +58,12 @@ class ModernWindow(tk.Toplevel):
             self.text_color = '#FFFFFF'
             self.card_bg = '#37474F' if self.current_theme == 'oscuro' else '#8E24AA'
             self.header_bg = self.theme_colors['gradient_start']
+            self.bg_color = self.theme_colors['gradient_end']
         else:
             self.text_color = '#263238'
             self.card_bg = '#FFFFFF'
             self.header_bg = self.theme_colors['gradient_start']
+            self.bg_color = self.theme_colors['gradient_end']
     
     def create_header(self, title, show_back_button=True, back_command=None):
         """Crea un header moderno para la ventana."""

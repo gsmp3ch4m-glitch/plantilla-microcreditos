@@ -4,6 +4,11 @@ import tkinter.ttk as ttk
 from PIL import Image, ImageTk
 from ui.ui_utils import apply_styles, create_gradient_image, get_theme_colors, get_module_colors, get_module_icon
 from utils.settings_manager import get_setting
+from ui.notifications_window import NotificationsWindow
+from database import get_db_connection
+import threading
+import time
+from datetime import datetime
 
 from ui.clients_window import ClientsWindow
 from ui.loans_window import LoansWindow
@@ -89,6 +94,13 @@ class MainWindow(tk.Toplevel):
         
         self.create_widgets()
         
+        # Notification System
+        self.pending_notifications = []
+        self.current_notif_index = 0
+        self.toast_frame = None
+        self.check_notifications() # Initial check
+        self.start_notification_timer() # Start 30min loop
+        
     def create_widgets(self):
         # Create gradient background
         theme_colors = get_theme_colors(self.current_theme)
@@ -146,6 +158,7 @@ class MainWindow(tk.Toplevel):
             ("Análisis", "mod_analysis_visible", "label_analysis"),
             ("Configuración", "mod_config_visible", "label_config"),
             ("Base de Datos", "mod_db_visible", "label_db"),
+            ("Notificaciones", "mod_notif_visible", "label_notif"),
             ("Documentos", "mod_docs_visible", "label_docs"),
         ]
         
@@ -155,9 +168,9 @@ class MainWindow(tk.Toplevel):
         # Define role-based permissions
         role_permissions = {
             'admin': ['all'],  # Admin tiene acceso a todo
-            'caja': ['Caja', 'Clientes', 'Calculadora', 'Documentos'],  # Cajero
-            'cajero': ['Caja', 'Clientes', 'Calculadora', 'Documentos'],  # Cajero (alias)
-            'analista': ['Préstamos', 'Clientes', 'Calculadora', 'Documentos'],  # Analista
+            'caja': ['Caja', 'Clientes', 'Calculadora', 'Documentos', 'Notificaciones'],  # Cajero
+            'cajero': ['Caja', 'Clientes', 'Calculadora', 'Documentos', 'Notificaciones'],  # Cajero (alias)
+            'analista': ['Préstamos', 'Clientes', 'Calculadora', 'Documentos', 'Notificaciones'],  # Analista
         }
         
         # Get allowed modules for this user
@@ -180,7 +193,10 @@ class MainWindow(tk.Toplevel):
             if is_visible and has_permission:
                 label = get_setting(label_key) or default_name
                 icon = get_module_icon(default_name)
+                if default_name == "Notificaciones" and icon == "📦": icon = "🔔"
+                
                 color = module_colors.get(default_name, '#2196F3')
+                if default_name == "Notificaciones": color = "#FF9800"
                 
                 # Create button
                 btn = ModernButton(container, label, icon, color, 
@@ -199,7 +215,7 @@ class MainWindow(tk.Toplevel):
             from ui.loans_menu_window import LoansMenuWindow
             LoansMenuWindow(self, self.user_data)
         elif module_name == "Caja":
-            CashWindow(self)
+            CashWindow(self, self.user_data)
         elif module_name == "Configuración":
             ConfigWindow(self, self.user_data)
         elif module_name == "Base de Datos":
@@ -208,8 +224,11 @@ class MainWindow(tk.Toplevel):
             CalculatorWindow(self)
         elif module_name == "Análisis":
             AnalysisWindow(self)
+        elif module_name == "Notificaciones":
+            NotificationsWindow(self, self.user_data)
         elif module_name == "Documentos":
-            messagebox.showinfo("Documentos", "Módulo de gestión de documentos (Próximamente).")
+            from ui.documents_menu_window import DocumentsMenuWindow
+            DocumentsMenuWindow(self)
         else:
             messagebox.showinfo("Info", f"Módulo {module_name} seleccionado")
 
@@ -225,3 +244,121 @@ class MainWindow(tk.Toplevel):
 
     def on_close(self):
         self.logout()
+
+    # --- Notification Logic ---
+    def start_notification_timer(self):
+        # Check every 30 minutes (1800000 ms)
+        self.after(1800000, self.notification_loop)
+
+    def notification_loop(self):
+        self.check_notifications()
+        self.start_notification_timer()
+
+    def check_notifications(self):
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            # Fetch pending notifications
+            cursor.execute("""
+                SELECT n.id, n.notify_date, n.description, u.username 
+                FROM notifications n
+                LEFT JOIN users u ON n.created_by = u.id
+                WHERE n.is_done = 0 OR n.is_done = FALSE
+            """)
+            rows = cursor.fetchall()
+            
+            self.pending_notifications = []
+            now = datetime.now()
+            
+            for row in rows:
+                if isinstance(row, dict):
+                    ndate = row['notify_date']
+                    if isinstance(ndate, str):
+                        try:
+                            ndate = datetime.strptime(ndate, "%Y-%m-%d %H:%M:%S")
+                        except: pass
+                    
+                    if ndate <= now:
+                        self.pending_notifications.append(row)
+                else:
+                    # Tuple
+                    ndate = row[1]
+                    if isinstance(ndate, str):
+                        try:
+                            ndate = datetime.strptime(ndate, "%Y-%m-%d %H:%M:%S")
+                        except: pass
+                    
+                    if ndate <= now:
+                        self.pending_notifications.append({
+                            'id': row[0],
+                            'notify_date': row[1],
+                            'description': row[2],
+                            'username': row[3]
+                        })
+            
+            if self.pending_notifications:
+                self.current_notif_index = 0
+                self.show_next_notification()
+                
+        except Exception as e:
+            print(f"Error checking notifications: {e}")
+        finally:
+            conn.close()
+
+    def show_next_notification(self):
+        if not self.pending_notifications:
+            return
+            
+        if self.current_notif_index >= len(self.pending_notifications):
+            self.current_notif_index = 0
+            
+        notif = self.pending_notifications[self.current_notif_index]
+        self.show_toast(notif)
+        
+        # Schedule next one after 5 seconds + small buffer
+        self.current_notif_index += 1
+        self.after(6000, self.show_next_notification)
+
+    def show_toast(self, notif):
+        if self.toast_frame:
+            self.toast_frame.destroy()
+            
+        # Create Toast Frame (Top Right)
+        self.toast_frame = tk.Frame(self, bg="#333333", padx=15, pady=10, relief="raised", bd=2)
+        
+        # Position: Top Right, below header
+        self.toast_frame.place(relx=1.0, y=80, anchor="ne", x=-20)
+        
+        # Content
+        tk.Label(self.toast_frame, text="🔔 Recordatorio", font=("Arial", 10, "bold"), fg="#FF9800", bg="#333333").pack(anchor="w")
+        tk.Label(self.toast_frame, text=f"{notif['description']}", font=("Arial", 11), fg="white", bg="#333333", wraplength=250).pack(anchor="w", pady=5)
+        
+        meta_text = f"Fecha: {notif['notify_date']} | Por: {notif['username']}"
+        tk.Label(self.toast_frame, text=meta_text, font=("Arial", 8), fg="#AAAAAA", bg="#333333").pack(anchor="w")
+        
+        # Mark Done Button (Small)
+        tk.Button(self.toast_frame, text="Ya lo realicé", command=lambda: self.mark_toast_done(notif['id']), 
+                 bg="#4CAF50", fg="white", font=("Arial", 8), bd=0, padx=5).pack(anchor="e", pady=(5,0))
+        
+        # Auto hide after 5 seconds
+        self.after(5000, self.hide_toast)
+
+    def hide_toast(self):
+        if self.toast_frame:
+            self.toast_frame.destroy()
+            self.toast_frame = None
+
+    def mark_toast_done(self, notif_id):
+        conn = get_db_connection()
+        try:
+            conn.execute("UPDATE notifications SET is_done = ? WHERE id = ?", (1, notif_id))
+            conn.commit()
+            
+            # Remove from local list so it doesn't show again in this cycle
+            self.pending_notifications = [n for n in self.pending_notifications if n['id'] != notif_id]
+            
+            self.hide_toast()
+        except Exception as e:
+            print(f"Error marking toast done: {e}")
+        finally:
+            conn.close()

@@ -456,6 +456,29 @@ class ConfigWindow(tk.Toplevel):
         tab = tk.Frame(self.notebook)
         self.notebook.add(tab, text="Empresa")
         
+        # Create Scrollable Container
+        canvas = tk.Canvas(tab)
+        scrollbar = tk.Scrollbar(tab, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Ensure scrollable frame expands to width of canvas
+        def on_canvas_configure(event):
+            canvas.itemconfig(canvas.create_window((0,0), window=scrollable_frame, anchor="nw"), width=event.width)
+        canvas.bind("<Configure>", on_canvas_configure)
+
         self.company_entries = {}
         keys = [
             ('company_name', 'Nombre de la Empresa'),
@@ -467,11 +490,12 @@ class ConfigWindow(tk.Toplevel):
             ('manager_dni', 'DNI del Gerente'),
             ('manager_phone', 'Teléfono del Gerente'),
             ('company_address', 'Dirección de la Empresa'),
-            ('manager_address', 'Dirección del Gerente')
+            ('manager_address', 'Dirección del Gerente'),
+            ('company_initial_cash', 'Dinero Inicial de la Empresa (S/.)')
         ]
         
         for key, label in keys:
-            frame = tk.Frame(tab)
+            frame = tk.Frame(scrollable_frame)
             frame.pack(fill=tk.X, padx=20, pady=5)
             tk.Label(frame, text=label, width=25, anchor="w").pack(side=tk.LEFT)
             entry = tk.Entry(frame)
@@ -479,7 +503,108 @@ class ConfigWindow(tk.Toplevel):
             entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
             self.company_entries[key] = entry
             
-        tk.Button(tab, text="Guardar Cambios (Requiere Admin)", command=self.save_company_settings, bg="#FF9800", fg="white").pack(pady=20)
+        tk.Button(scrollable_frame, text="Guardar Cambios (Requiere Admin)", command=self.save_company_settings, bg="#FF9800", fg="white").pack(pady=20)
+
+        # Cloud Sync Section
+        tk.Label(scrollable_frame, text="Sincronización Nube", font=("Arial", 12, "bold"), fg="#2196F3").pack(pady=(20, 10))
+        
+        cloud_frame = tk.LabelFrame(scrollable_frame, text="Configuración de Base de Datos Remota", padx=10, pady=10)
+        cloud_frame.pack(fill=tk.X, padx=20, pady=(0, 20))
+        
+        # Load current secrets
+        import os
+        import json
+        secrets_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'secrets.json')
+        current_secrets = {}
+        if os.path.exists(secrets_path):
+            try:
+                with open(secrets_path, 'r') as f:
+                    current_secrets = json.load(f)
+            except: pass
+            
+        self.cloud_entries = {}
+        cloud_keys = [
+            ('SUPABASE_URL', 'Supabase URL'),
+            ('SUPABASE_KEY', 'Supabase Key'),
+            ('DB_URI', 'DB URI')
+        ]
+        
+        for key, label in cloud_keys:
+            frame = tk.Frame(cloud_frame)
+            frame.pack(fill=tk.X, pady=2)
+            tk.Label(frame, text=label, width=15, anchor="w").pack(side=tk.LEFT)
+            entry = tk.Entry(frame, show="*" if 'KEY' in key or 'URI' in key else "")
+            entry.insert(0, current_secrets.get(key, ""))
+            entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            self.cloud_entries[key] = entry
+            
+        btn_frame = tk.Frame(cloud_frame)
+        btn_frame.pack(fill=tk.X, pady=10)
+        
+        tk.Button(btn_frame, text="Conectar y Sincronizar", command=self.connect_cloud, bg="#4CAF50", fg="white").pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="Desconectar (Modo Local)", command=self.disconnect_cloud, bg="#f44336", fg="white").pack(side=tk.LEFT, padx=5)
+
+    def connect_cloud(self):
+        # Ask for admin password
+        password = self.ask_admin_password()
+        if not password: return
+        if not self.verify_admin(password):
+            messagebox.showerror("Error", "Contraseña incorrecta")
+            return
+
+        # Save secrets
+        secrets = {
+            "MODE": "CLOUD",
+            "SUPABASE_URL": self.cloud_entries['SUPABASE_URL'].get().strip(),
+            "SUPABASE_KEY": self.cloud_entries['SUPABASE_KEY'].get().strip(),
+            "DB_URI": self.cloud_entries['DB_URI'].get().strip()
+        }
+        
+        if not all([secrets['SUPABASE_URL'], secrets['SUPABASE_KEY'], secrets['DB_URI']]):
+            messagebox.showerror("Error", "Todos los campos de nube son obligatorios")
+            return
+            
+        try:
+            import os
+            import json
+            secrets_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'secrets.json')
+            with open(secrets_path, 'w') as f:
+                json.dump(secrets, f, indent=4)
+                
+            messagebox.showinfo("Éxito", "Conexión configurada. La aplicación se cerrará para aplicar los cambios.")
+            self.master.destroy() # Close main window
+            exit() # Exit app
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo guardar la configuración: {e}")
+
+    def disconnect_cloud(self):
+        # Ask for admin password
+        password = self.ask_admin_password()
+        if not password: return
+        if not self.verify_admin(password):
+            messagebox.showerror("Error", "Contraseña incorrecta")
+            return
+            
+        if not messagebox.askyesno("Confirmar", "¿Volver a modo local? Dejará de ver los datos de la nube."):
+            return
+
+        try:
+            import os
+            import json
+            secrets_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'secrets.json')
+            
+            # Option 1: Delete file
+            # os.remove(secrets_path)
+            
+            # Option 2: Set MODE to LOCAL (Preserve creds maybe? No, safer to clear or just set mode)
+            with open(secrets_path, 'w') as f:
+                json.dump({"MODE": "LOCAL"}, f, indent=4)
+                
+            messagebox.showinfo("Éxito", "Modo local activado. La aplicación se cerrará para aplicar los cambios.")
+            self.master.destroy()
+            exit()
+        except Exception as e:
+            messagebox.showerror("Error", f"Error: {e}")
 
     def save_company_settings(self):
         # Ask for admin password

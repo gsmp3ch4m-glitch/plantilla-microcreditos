@@ -19,6 +19,15 @@ def get_all_settings():
 def update_setting(key, value):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE settings SET value = ? WHERE key = ?", (value, key))
+    
+    # Check if key exists
+    cursor.execute("SELECT 1 FROM settings WHERE key = ?", (key,))
+    exists = cursor.fetchone()
+    
+    if exists:
+        cursor.execute("UPDATE settings SET value = ? WHERE key = ?", (value, key))
+    else:
+        cursor.execute("INSERT INTO settings (key, value) VALUES (?, ?)", (key, value))
+        
     conn.commit()
     conn.close()

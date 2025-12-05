@@ -22,18 +22,28 @@ class LoginWindow(tk.Toplevel):
         x_cordinate = int((screen_width/2) - (window_width/2))
         y_cordinate = int((screen_height/2) - (window_height/2))
         self.geometry(f"{window_width}x{window_height}+{x_cordinate}+{y_cordinate}")
+        self.attributes('-topmost', True) # Force to top
         
         self.resizable(False, False)
         
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         
         # Get current theme
-        self.current_theme = get_setting('app_theme') or 'turquesa'
+        try:
+            self.current_theme = get_setting('app_theme') or 'turquesa'
+        except Exception:
+            self.current_theme = 'turquesa'
         
         # Apply theme
-        apply_styles(self, self.current_theme)
+        try:
+            apply_styles(self, self.current_theme)
+        except Exception:
+            pass
         
         self.create_widgets()
+        self.lift()
+        self.focus_force()
+        self.attributes('-topmost', False) # Disable topmost after showing so it doesn't block other windows
         
     def create_widgets(self):
         company_name = get_setting('company_name') or 'El Canguro Pro'

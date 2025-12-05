@@ -7,6 +7,7 @@ from datetime import datetime
 
 def regenerate_installments():
     conn = get_db_connection()
+    conn.row_factory = True # Enable dict-like access
     cursor = conn.cursor()
     
     print("Checking for loans without installments...")
@@ -35,11 +36,17 @@ def regenerate_installments():
                 kwargs['meses'] = 3 # Default fallback
             
             # Calculate
-            start_date = datetime.strptime(loan['start_date'], '%Y-%m-%d').date()
+            start_date = loan['start_date']
+            if start_date is None:
+                print(f"  -> Warning: Loan {loan['id']} has no start_date. Defaulting to today.")
+                start_date = datetime.now().date()
+            elif isinstance(start_date, str):
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            
             loan_info = obtener_info_prestamo(
                 loan['loan_type'],
-                loan['amount'],
-                loan['interest_rate'],
+                loan['amount'] or 0.0,
+                loan['interest_rate'] or 0.0,
                 start_date,
                 **kwargs
             )
@@ -49,14 +56,16 @@ def regenerate_installments():
             for num, due, amt in loan_info['cuotas']:
                 cursor.execute("""
                     INSERT INTO installments (loan_id, number, due_date, amount, status)
-                    VALUES (?, ?, ?, ?, 'pending')
+                    VALUES (%s, %s, %s, %s, 'pending')
                 """, (loan['id'], num, due, amt))
                 count += 1
                 
             print(f"  -> Generated {count} installments.")
+            conn.commit() # Commit per loan
             
         except Exception as e:
             print(f"  -> Error fixing loan {loan['id']}: {e}")
+            conn.rollback()
             
     conn.commit()
     conn.close()

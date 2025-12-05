@@ -101,6 +101,12 @@ class LoansWindow(tk.Toplevel):
         search_entry = tk.Entry(toolbar, textvariable=self.search_var, font=("Segoe UI", 10), width=20)
         search_entry.pack(side=tk.LEFT, padx=5, pady=8)
 
+        # View Clients Button (Only for Pawn Shop)
+        if self.loan_type == 'empeno':
+            tk.Button(toolbar, text="👥 Ver Clientes", command=self.open_pawn_clients,
+                     bg='#009688', fg='white', font=("Segoe UI", 10, "bold"),
+                     relief='flat', cursor='hand2', padx=15, pady=8).pack(side=tk.RIGHT, padx=10, pady=8)
+
         # Treeview
         tree_frame = tk.Frame(self)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -331,6 +337,10 @@ class LoansWindow(tk.Toplevel):
 
     def open_add_loan_dialog(self):
         LoanForm(self, self.loan_type, self.load_loans)
+
+    def open_pawn_clients(self):
+        from ui.clients_window import ClientsWindow
+        ClientsWindow(self, filter_loan_type='empeno')
 
 
 class LegacyFrozenLoanDialog(tk.Toplevel):

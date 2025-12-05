@@ -8,10 +8,18 @@ from database import get_db_connection
 from ui.ui_utils import ScrollableFrame, ask_admin_password
 
 class ClientsWindow(tk.Toplevel):
-    def __init__(self, parent):
+    def __init__(self, parent, filter_loan_type=None):
         super().__init__(parent)
         self.parent = parent
-        self.title("Gestión de Clientes")
+        self.filter_loan_type = filter_loan_type
+        
+        title = "Gestión de Clientes"
+        if filter_loan_type == 'empeno':
+            title += " - Casa de Empeño"
+        elif filter_loan_type == 'rapidiario':
+            title += " - Rapidiario"
+            
+        self.title(title)
         self.geometry("1100x750")
         
         # Check permissions
@@ -34,7 +42,11 @@ class ClientsWindow(tk.Toplevel):
         main_frame = self.scroll_container.scrollable_frame
         
         # Title
-        tk.Label(main_frame, text="Gestión de Clientes", font=("Segoe UI", 20, "bold"), bg="#E0F2F1", fg="#00695C").pack(pady=(20, 10))
+        header_text = "Gestión de Clientes"
+        if self.filter_loan_type == 'empeno':
+            header_text = "Clientes - Casa de Empeño"
+            
+        tk.Label(main_frame, text=header_text, font=("Segoe UI", 20, "bold"), bg="#E0F2F1", fg="#00695C").pack(pady=(20, 10))
 
         # Content Area (Form + List)
         content_frame = tk.Frame(main_frame, bg="#E0F2F1")
@@ -115,6 +127,7 @@ class ClientsWindow(tk.Toplevel):
         self.search_var.trace("w", lambda name, index, mode: self.load_clients()) 
         self.entry_search = ttk.Entry(search_frame, textvariable=self.search_var)
         self.entry_search.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        self.entry_search.bind('<Return>', lambda e: self.load_clients())
         
         # Search Button (Lupa)
         self.btn_search = ttk.Button(search_frame, text="🔍", command=self.load_clients, width=3)
@@ -355,12 +368,23 @@ class ClientsWindow(tk.Toplevel):
             self.tree.delete(item)
             
         search_term = self.search_var.get()
-        query = "SELECT * FROM clients"
-        params = ()
+        params = []
         
+        if self.filter_loan_type:
+            # Filter by loan type (distinct clients with active/overdue loans of that type)
+            query = """
+                SELECT DISTINCT c.* 
+                FROM clients c
+                JOIN loans l ON c.id = l.client_id
+                WHERE l.loan_type = ? AND l.status IN ('active', 'overdue')
+            """
+            params.append(self.filter_loan_type)
+        else:
+            query = "SELECT * FROM clients WHERE 1=1"
+            
         if search_term:
-            query += " WHERE dni LIKE ? OR first_name LIKE ? OR last_name LIKE ?"
-            params = (f'%{search_term}%', f'%{search_term}%', f'%{search_term}%')
+            query += " AND (dni LIKE ? OR first_name LIKE ? OR last_name LIKE ?)"
+            params.extend([f'%{search_term}%'] * 3)
             
         conn = get_db_connection()
         cursor = conn.cursor()

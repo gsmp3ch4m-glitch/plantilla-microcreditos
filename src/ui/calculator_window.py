@@ -4,6 +4,10 @@ from ui.modern_window import ModernWindow
 from datetime import datetime, date
 from utils.loan_calculator import obtener_info_prestamo
 from tkcalendar import DateEntry
+from utils.pdf_generator import PDFGenerator
+import webbrowser
+import os
+import pyperclip
 
 class CalculatorWindow(ModernWindow):
     def __init__(self, parent):
@@ -296,7 +300,81 @@ class CalculatorWindow(ModernWindow):
         close_btn = tk.Button(btn_frame, text="Cerrar", command=cronograma_win.destroy,
                              bg='#f44336', fg='white', font=("Segoe UI", 10, "bold"),
                              relief='flat', cursor='hand2', padx=20, pady=8)
-        close_btn.pack(side='right')
+        close_btn.pack(side='right', padx=5)
+
+        # Botones de Acción (PDF, WhatsApp, Copiar)
+        
+        # Botones de Acción (PDF, WhatsApp, Copiar)
+        
+        def generar_pdf():
+            generator = PDFGenerator()
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"simulacion_{timestamp}.pdf"
+            filepath = os.path.join(generator.reports_dir, filename)
+            
+            # Preparar datos
+            sim_data = {
+                'monto': monto,
+                'tasa': tasa,
+                'tipo': loan_type,
+                'fecha_inicio': fecha_inicio,
+                'total_interes': resultado['total_interes'],
+                'total_pagar': resultado['total_pagar']
+            }
+            
+            try:
+                path = generator.generate_simulation_report(filepath, sim_data, resultado['cuotas'])
+                messagebox.showinfo("Éxito", f"PDF generado correctamente:\n{path}")
+                os.startfile(path)
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al generar PDF: {e}")
+
+        def generar_y_copiar_imagen():
+            try:
+                from utils.image_generator import ImageGenerator
+                img_gen = ImageGenerator()
+                
+                sim_data = {
+                    'monto': monto,
+                    'tasa': tasa,
+                    'tipo': loan_type,
+                    'fecha_inicio': fecha_inicio,
+                    'total_interes': resultado['total_interes'],
+                    'total_pagar': resultado['total_pagar']
+                }
+                
+                # Generar imagen
+                img = img_gen.generate_simulation_image(sim_data, resultado['cuotas'])
+                
+                # Copiar al portapapeles
+                img_gen.copy_to_clipboard(img)
+                return True
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al generar imagen: {e}")
+                return False
+
+        def compartir_whatsapp():
+            if generar_y_copiar_imagen():
+                # Abrir WhatsApp Web
+                webbrowser.open("https://web.whatsapp.com")
+                messagebox.showinfo("WhatsApp", "Imagen copiada al portapapeles.\n\n1. Espera a que cargue WhatsApp Web.\n2. Selecciona el chat.\n3. Presiona Ctrl+V para pegar la imagen.")
+
+        def copiar_imagen():
+            if generar_y_copiar_imagen():
+                messagebox.showinfo("Copiado", "Imagen de la simulación copiada al portapapeles.")
+
+        # Botones
+        tk.Button(btn_frame, text="📱 WhatsApp", command=compartir_whatsapp,
+                 bg='#25D366', fg='white', font=("Segoe UI", 10, "bold"),
+                 relief='flat', cursor='hand2', padx=15, pady=8).pack(side='left', padx=5)
+                 
+        tk.Button(btn_frame, text="📄 PDF", command=generar_pdf,
+                 bg='#FF9800', fg='white', font=("Segoe UI", 10, "bold"),
+                 relief='flat', cursor='hand2', padx=15, pady=8).pack(side='left', padx=5)
+
+        tk.Button(btn_frame, text="📋 Copiar Img", command=copiar_imagen,
+                 bg='#2196F3', fg='white', font=("Segoe UI", 10, "bold"),
+                 relief='flat', cursor='hand2', padx=15, pady=8).pack(side='left', padx=5)
         
         # Bind mouse wheel for scrolling
         def _on_mousewheel(event):

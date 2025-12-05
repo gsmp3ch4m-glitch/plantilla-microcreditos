@@ -9,6 +9,15 @@
 (7, 'status', 'TEXT', 0, "'active'", 0)
 (8, 'due_date', 'DATE', 0, None, 0)
 (9, 'analyst_id', 'INTEGER', 0, None, 0)
+(10, 'refinance_count', 'INTEGER', 0, '0', 0)
+(11, 'frozen_amount', 'REAL', 0, '0', 0)
+(12, 'admin_fee', 'REAL', 0, '0', 0)
+(13, 'collateral_sale_price', 'REAL', 0, '0', 0)
+(14, 'frozen_date', 'DATE', 0, None, 0)
+(15, 'original_amount', 'REAL', 0, None, 0)
+(16, 'parent_loan_id', 'INTEGER', 0, None, 0)
+(17, 'sale_price', 'REAL', 0, '0', 0)
+(18, 'sales_expense', 'REAL', 0, '0', 0)
 
 --- Settings Table ---
 (0, 'key', 'TEXT', 0, None, 1)
