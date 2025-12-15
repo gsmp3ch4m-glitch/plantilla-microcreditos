@@ -16,7 +16,7 @@ class CashWindow(tk.Toplevel):
         self.parent = parent
         self.user_data = user_data
         self.title("Caja - Sistema de Gestión")
-        self.geometry("1200x700")
+        self.geometry("1100x650")
         self.configure(bg='#f5f5f5')
         
         self.current_session = None
@@ -41,9 +41,28 @@ class CashWindow(tk.Toplevel):
     
     def prompt_opening_balance(self):
         """Show dialog to open cash session"""
+        
+        # --- Get last closing balance for pre-fill ---
+        last_closing_balance = 0.0
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT closing_balance 
+                FROM cash_sessions 
+                WHERE user_id = ? AND status = 'closed' 
+                ORDER BY closing_date DESC LIMIT 1
+            """, (self.user_data['id'],))
+            row = cursor.fetchone()
+            if row:
+                last_closing_balance = row['closing_balance']
+            conn.close()
+        except Exception as e:
+            print(f"Error fetching last closing: {e}")
+
         dialog = tk.Toplevel(self)
         dialog.title("Apertura de Caja")
-        dialog.geometry("400x200")
+        dialog.geometry("400x350")
         dialog.transient(self)
         dialog.grab_set()
         
@@ -52,6 +71,9 @@ class CashWindow(tk.Toplevel):
         tk.Label(dialog, text="Dinero en Caja:", font=("Segoe UI", 10)).pack(pady=(10,0))
         entry_cash = tk.Entry(dialog, font=("Segoe UI", 12), width=20)
         entry_cash.pack(pady=5)
+        
+        # Pre-fill with last closing balance
+        entry_cash.insert(0, f"{last_closing_balance:.2f}")
         entry_cash.focus()
         
         def save_opening():
@@ -166,6 +188,24 @@ class CashWindow(tk.Toplevel):
         tk.Button(frame, text="🔓 APERTURAR CAJA", command=self.prompt_opening_balance,
                  bg="#4CAF50", fg="white", font=("Segoe UI", 14, "bold"), padx=30, pady=15, cursor='hand2').pack()
     
+    def create_card(self, parent, title, value, color, icon):
+        # Compact Card
+        frame = tk.Frame(parent, bg="white", highlightbackground=color, highlightthickness=1)
+        
+        # Header with Icon
+        header = tk.Frame(frame, bg="white")
+        header.pack(fill=tk.X, padx=10, pady=(5, 0))
+        
+        tk.Label(header, text=icon, font=("Segoe UI", 14), bg="white", fg=color).pack(side=tk.LEFT)
+        tk.Label(header, text=title, font=("Segoe UI", 10, "bold"), fg="#757575", bg="white").pack(side=tk.LEFT, padx=5)
+        
+        # Value (Smaller font)
+        lbl_value = tk.Label(frame, text=value, font=("Segoe UI", 16, "bold"), fg=color, bg="white")
+        lbl_value.pack(padx=10, pady=(0, 5))
+        
+        frame.lbl_value = lbl_value # Store reference
+        return frame
+
     def create_widgets(self):
         # Clear existing widgets
         for widget in self.winfo_children():
@@ -174,41 +214,41 @@ class CashWindow(tk.Toplevel):
         if not self.current_session:
             return
         
-        # Header
-        header = tk.Frame(self, bg="#2196F3", height=120)
+        # Header (Smaller Height)
+        header = tk.Frame(self, bg="#2196F3", height=50)
         header.pack(fill=tk.X)
         header.pack_propagate(False)
         
-        tk.Label(header, text="💰 Caja", font=("Segoe UI", 20, "bold"), bg="#2196F3", fg="white").pack(side=tk.LEFT, padx=20, pady=20)
+        tk.Label(header, text="💰 Caja", font=("Segoe UI", 16, "bold"), bg="#2196F3", fg="white").pack(side=tk.LEFT, padx=20, pady=10)
         
-        # Balance display (Container for 3 balances)
-        balance_container = tk.Frame(header, bg="#2196F3")
-        balance_container.pack(side=tk.RIGHT, padx=20, pady=10)
+        # Main content area
+        self.main_container = tk.Frame(self, bg='#f5f5f5')
+        self.main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=0)
+
+        # --- Summary Cards (Less Padding) ---
+        self.frame_cards = tk.Frame(self.main_container, bg="#f5f5f5")
+        self.frame_cards.pack(fill=tk.X, pady=10)
         
-        # 1. Main Cash
-        frame_main = tk.Frame(balance_container, bg="#1976D2", relief=tk.RAISED, bd=1, padx=10, pady=5)
-        frame_main.pack(side=tk.LEFT, padx=5)
-        tk.Label(frame_main, text="Caja Principal", font=("Segoe UI", 9), bg="#1976D2", fg="#E3F2FD").pack()
-        self.lbl_balance = tk.Label(frame_main, text="S/ 0.00", font=("Segoe UI", 16, "bold"), bg="#1976D2", fg="#FFF")
-        self.lbl_balance.pack()
+        # Efectivo
+        self.card_main = self.create_card(self.frame_cards, "Efectivo", "S/ 0.00", "#4CAF50", "💵")
+        self.card_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
         
-        # 2. Petty Cash
-        frame_petty = tk.Frame(balance_container, bg="#0288D1", relief=tk.RAISED, bd=1, padx=10, pady=5)
-        frame_petty.pack(side=tk.LEFT, padx=5)
-        tk.Label(frame_petty, text="Caja Chica", font=("Segoe UI", 9), bg="#0288D1", fg="#E3F2FD").pack()
-        self.lbl_petty = tk.Label(frame_petty, text="S/ 0.00", font=("Segoe UI", 16, "bold"), bg="#0288D1", fg="#FFF")
-        self.lbl_petty.pack()
+        # Cuenta / Yape
+        self.card_petty = self.create_card(self.frame_cards, "Cuenta / Yape", "S/ 0.00", "#2196F3", "💳")
+        self.card_petty.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0))
         
-        # 3. Total
-        frame_total = tk.Frame(balance_container, bg="#01579B", relief=tk.RAISED, bd=1, padx=10, pady=5)
-        frame_total.pack(side=tk.LEFT, padx=5)
-        tk.Label(frame_total, text="Total Efectivo", font=("Segoe UI", 9), bg="#01579B", fg="#E3F2FD").pack()
-        self.lbl_total = tk.Label(frame_total, text="S/ 0.00", font=("Segoe UI", 16, "bold"), bg="#01579B", fg="#FFF")
-        self.lbl_total.pack()
+        # Total (Smaller Height)
+        self.frame_total = tk.Frame(self.main_container, bg="#009688", height=40)
+        self.frame_total.pack(fill=tk.X, pady=5)
+        self.frame_total.pack_propagate(False)
+        
+        tk.Label(self.frame_total, text="Total Caja:", font=("Segoe UI", 12, "bold"), fg="white", bg="#009688").pack(side=tk.LEFT, padx=20)
+        self.lbl_total_balance = tk.Label(self.frame_total, text="S/ 0.00", font=("Segoe UI", 18, "bold"), fg="white", bg="#009688")
+        self.lbl_total_balance.pack(side=tk.RIGHT, padx=20)
         
         # Notebook (Tabs)
-        self.notebook = ttk.Notebook(self)
-        self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.notebook = ttk.Notebook(self.main_container)
+        self.notebook.pack(fill=tk.BOTH, expand=True, padx=0, pady=5)
         
         # Tab 1: Movimientos
         self.tab_movements = tk.Frame(self.notebook, bg='white')
@@ -217,7 +257,7 @@ class CashWindow(tk.Toplevel):
         
         # Tab 2: Cierre
         self.tab_closing = tk.Frame(self.notebook, bg='white')
-        self.notebook.add(self.tab_closing, text="🔒 Cierre de Caja")
+        self.notebook.add(self.tab_closing, text="🔒 Cierre")
         self.setup_closing_tab()
         
         self.update_balance()
@@ -380,13 +420,21 @@ class CashWindow(tk.Toplevel):
     
     def update_balance(self):
         """Calculate and update current balance"""
+        if not hasattr(self, 'card_main') or not hasattr(self, 'card_petty'):
+            return
+
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Split sums by payment method
+        # Cash: 'efectivo'
+        # Digital: 'transferencia', 'yape', 'deposito'
         cursor.execute("""
             SELECT 
-                SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
-                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
+                SUM(CASE WHEN type = 'income' AND payment_method = 'efectivo' THEN amount ELSE 0 END) as income_cash,
+                SUM(CASE WHEN type = 'expense' AND payment_method = 'efectivo' THEN amount ELSE 0 END) as expense_cash,
+                SUM(CASE WHEN type = 'income' AND payment_method != 'efectivo' THEN amount ELSE 0 END) as income_digital,
+                SUM(CASE WHEN type = 'expense' AND payment_method != 'efectivo' THEN amount ELSE 0 END) as expense_digital
             FROM transactions
             WHERE cash_session_id = ?
         """, (self.current_session['id'],))
@@ -394,19 +442,28 @@ class CashWindow(tk.Toplevel):
         result = cursor.fetchone()
         conn.close()
         
-        income = result['income'] or 0
-        expense = result['expense'] or 0
-        balance = self.current_session['opening_balance'] + income - expense
+        income_cash = result['income_cash'] or 0
+        expense_cash = result['expense_cash'] or 0
+        income_digital = result['income_digital'] or 0
+        expense_digital = result['expense_digital'] or 0
         
-        self.lbl_balance.config(text=f"S/ {balance:,.2f}")
+        # 1. Main Cash Balance = Opening + Cash Flow
+        balance_cash = self.current_session['opening_balance'] + income_cash - expense_cash
+        self.card_main.lbl_value.config(text=f"S/ {balance_cash:,.2f}")
         
-        # Update Petty Cash
-        petty_cash = float(get_setting('petty_cash_balance') or '0')
-        self.lbl_petty.config(text=f"S/ {petty_cash:,.2f}")
+        # 2. Digital/Account Balance = Base (Petty Setting) + Digital Flow
+        # Note: If digital account is fully managed by transactions, we might not need the setting.
+        # But for backward compatibility with 'Caja Chica' logic, we keep it as a base or parallel.
+        # User request implies "investment" (transaction) should be here.
+        
+        base_digital = float(get_setting('petty_cash_balance') or '0')
+        balance_digital = base_digital + income_digital - expense_digital
+        
+        self.card_petty.lbl_value.config(text=f"S/ {balance_digital:,.2f}")
         
         # Update Total
-        total = balance + petty_cash
-        self.lbl_total.config(text=f"S/ {total:,.2f}")
+        total = balance_cash + balance_digital
+        self.lbl_total_balance.config(text=f"S/ {total:,.2f}")
 
     def deposit_to_petty_cash(self):
         """Move money from Main Cash to Petty Cash"""

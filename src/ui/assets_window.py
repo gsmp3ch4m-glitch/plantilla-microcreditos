@@ -1099,6 +1099,28 @@ class AssetsWindow(tk.Toplevel):
                 else:
                     conn.execute("INSERT INTO capital_entries (target_type, target_id, amount, entry_date, description) VALUES (?, ?, ?, ?, ?)", 
                                  (ttype, tid, amt, entry_dt, desc))
+                    
+                    # --- AUTO-INJECT TO CASH (If Target is Cash or Bank) ---
+                    # Find active session first
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT id FROM cash_sessions WHERE user_id=? AND status='open' ORDER BY id DESC LIMIT 1", (self.user_data['id'],))
+                    sess = cursor.fetchone()
+                    
+                    if sess:
+                        session_id = sess['id']
+                        
+                        # Determine Payment Method based on Target
+                        pay_method = 'efectivo' if ttype == 'cash' else 'transferencia'
+                        
+                        # Add Transaction
+                        conn.execute("""
+                            INSERT INTO transactions (type, category, amount, description, date, user_id, loan_id, payment_method, cash_session_id)
+                            VALUES ('income', 'capital_injection', ?, ?, CURRENT_TIMESTAMP, ?, NULL, ?, ?)
+                        """, (amt, f"Inversión/Capital: {desc}", self.user_data['id'], pay_method, session_id))
+                    else:
+                        # Warning if no session open, but we still saved the Capital Entry record.
+                        pass
+
                     messagebox.showinfo("Éxito", "Capital registrado")
                     
                 conn.commit()

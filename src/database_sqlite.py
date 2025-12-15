@@ -258,6 +258,12 @@ def init_db():
         )
     ''')
 
+    # Migration for cash_sessions
+    try:
+        cursor.execute("SELECT observation FROM cash_sessions LIMIT 1")
+    except sqlite3.OperationalError:
+        cursor.execute("ALTER TABLE cash_sessions ADD COLUMN observation TEXT")
+
     # Installments table (Cronograma de Pagos)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS installments (

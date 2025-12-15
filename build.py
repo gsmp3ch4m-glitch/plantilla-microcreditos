@@ -37,12 +37,27 @@ def verify_secrets_exclusion():
     else:
         print("Verification Successful: secrets.json is NOT present in the build.")
 
+def create_portable_zip():
+    """Create a zip file of the dist directory for portable use."""
+    dist_dir = os.path.join('dist', 'SistemaPrestamos')
+    zip_name = 'SistemaPrestamos_Portable'
+    
+    if os.path.exists(dist_dir):
+        print(f"Creating portable zip: {zip_name}.zip...")
+        shutil.make_archive(zip_name, 'zip', 'dist', 'SistemaPrestamos')
+        print(f"Portable zip created: {zip_name}.zip")
+    else:
+        print("Error: Dist directory not found, cannot zip.")
+
 def main():
     print("Starting Secure Build Process...")
     clean_build_dirs()
     run_pyinstaller()
     verify_secrets_exclusion()
-    print("\nBuild process completed. Executable is in dist/SistemaPrestamos")
+    create_portable_zip()
+    print("\nBuild process completed.")
+    print(f"Executable folder: dist/SistemaPrestamos")
+    print(f"Portable ZIP: SistemaPrestamos_Portable.zip")
 
 if __name__ == "__main__":
     main()

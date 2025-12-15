@@ -102,10 +102,10 @@ class LoansWindow(tk.Toplevel):
         search_entry.pack(side=tk.LEFT, padx=5, pady=8)
 
         # View Clients Button (Only for Pawn Shop)
-        if self.loan_type == 'empeno':
-            tk.Button(toolbar, text="👥 Ver Clientes", command=self.open_pawn_clients,
-                     bg='#009688', fg='white', font=("Segoe UI", 10, "bold"),
-                     relief='flat', cursor='hand2', padx=15, pady=8).pack(side=tk.RIGHT, padx=10, pady=8)
+        # View Clients Button (For all loan types)
+        tk.Button(toolbar, text="👥 Ver Clientes", command=self.open_clients,
+                  bg='#009688', fg='white', font=("Segoe UI", 10, "bold"),
+                  relief='flat', cursor='hand2', padx=15, pady=8).pack(side=tk.RIGHT, padx=10, pady=8)
 
         # Treeview
         tree_frame = tk.Frame(self)
@@ -338,9 +338,12 @@ class LoansWindow(tk.Toplevel):
     def open_add_loan_dialog(self):
         LoanForm(self, self.loan_type, self.load_loans)
 
-    def open_pawn_clients(self):
+    def open_clients(self):
+        def start_new_loan(client_id):
+            LoanForm(self, self.loan_type, self.load_loans, client_id=client_id)
+            
         from ui.clients_window import ClientsWindow
-        ClientsWindow(self, filter_loan_type='empeno')
+        ClientsWindow(self, filter_loan_type=self.loan_type, on_select_callback=start_new_loan)
 
 
 class LegacyFrozenLoanDialog(tk.Toplevel):
@@ -552,11 +555,12 @@ class LegacyFrozenLoanDialog(tk.Toplevel):
 
 class LoanForm(tk.Toplevel):
     """Formulario completo para crear un nuevo préstamo"""
-    def __init__(self, parent, default_type=None, callback=None):
+    def __init__(self, parent, default_type=None, callback=None, client_id=None):
         super().__init__(parent)
         self.parent = parent
         self.default_type = default_type
         self.callback = callback
+        self.start_with_client_id = client_id
         self.selected_client_id = None
         self.pawn_items = []
         
@@ -626,6 +630,15 @@ class LoanForm(tk.Toplevel):
         self.client_combo['values'] = [] # Start empty or with all, user prefers search
         
         self.client_combo.bind("<<ComboboxSelected>>", self.on_client_select)
+        
+        # Pre-select client if provided
+        if self.start_with_client_id:
+            # Find name in map
+            for name, cid in self.clients_data.items():
+                if cid == self.start_with_client_id:
+                    self.client_combo.set(name)
+                    self.selected_client_id = cid
+                    break
         
         # Loan Details
         details_frame = tk.LabelFrame(form, text="Datos del Préstamo", font=("Segoe UI", 11, "bold"),

@@ -252,11 +252,11 @@ class AnalyticsManager:
             params.append(end_date)
             
         cursor.execute(f"""
-            SELECT i.payment_date, i.amount_paid, l.loan_type, l.amount as capital, 
+            SELECT i.payment_date, i.paid_amount as amount_paid, l.loan_type, l.amount as capital, 
                    l.interest_rate, l.status, l.frozen_amount, l.frozen_date
             FROM installments i
             JOIN loans l ON i.loan_id = l.id
-            WHERE i.amount_paid > 0 {date_filter}
+            WHERE i.paid_amount > 0 {date_filter}
             ORDER BY i.payment_date
         """, params)
         
@@ -321,11 +321,11 @@ class AnalyticsManager:
             params.append(end_date)
             
         cursor.execute(f"""
-            SELECT i.amount_paid, l.loan_type, l.amount as capital, 
+            SELECT i.paid_amount as amount_paid, l.loan_type, l.amount as capital, 
                    l.interest_rate, l.status, l.frozen_amount
             FROM installments i
             JOIN loans l ON i.loan_id = l.id
-            WHERE i.amount_paid > 0 {date_filter}
+            WHERE i.paid_amount > 0 {date_filter}
         """, params)
         
         payments = cursor.fetchall()

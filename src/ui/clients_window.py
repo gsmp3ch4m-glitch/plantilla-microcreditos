@@ -8,16 +8,21 @@ from database import get_db_connection
 from ui.ui_utils import ScrollableFrame, ask_admin_password
 
 class ClientsWindow(tk.Toplevel):
-    def __init__(self, parent, filter_loan_type=None):
+    def __init__(self, parent, filter_loan_type=None, on_select_callback=None):
         super().__init__(parent)
         self.parent = parent
         self.filter_loan_type = filter_loan_type
+        self.on_select_callback = on_select_callback
         
         title = "Gestión de Clientes"
         if filter_loan_type == 'empeno':
             title += " - Casa de Empeño"
         elif filter_loan_type == 'rapidiario':
             title += " - Rapidiario"
+        elif filter_loan_type == 'bancario':
+            title += " - Préstamo Bancario"
+        elif filter_loan_type == 'congelado': # or 'frozen' depending on internal name
+            title += " - Préstamo Congelado"
             
         self.title(title)
         self.geometry("1100x750")
@@ -45,6 +50,12 @@ class ClientsWindow(tk.Toplevel):
         header_text = "Gestión de Clientes"
         if self.filter_loan_type == 'empeno':
             header_text = "Clientes - Casa de Empeño"
+        elif self.filter_loan_type == 'rapidiario':
+            header_text = "Clientes - Rapidiario"
+        elif self.filter_loan_type == 'bancario':
+            header_text = "Clientes - Préstamo Bancario"
+        elif self.filter_loan_type == 'congelado':
+            header_text = "Clientes - Préstamo Congelado"
             
         tk.Label(main_frame, text=header_text, font=("Segoe UI", 20, "bold"), bg="#E0F2F1", fg="#00695C").pack(pady=(20, 10))
 
@@ -156,6 +167,19 @@ class ClientsWindow(tk.Toplevel):
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
         self.tree.bind("<<TreeviewSelect>>", self.on_select)
+        if self.on_select_callback:
+            self.tree.bind("<Double-1>", self.on_double_click)
+
+    def on_double_click(self, event):
+        selected = self.tree.selection()
+        if not selected: return
+        
+        item = self.tree.item(selected[0])
+        client_id = item['values'][0]
+        
+        if self.on_select_callback:
+            self.on_select_callback(client_id)
+            self.destroy() # Close window after selection
 
     def upload_photo(self):
         file_path = filedialog.askopenfilename(filetypes=[("Imágenes", "*.jpg;*.jpeg;*.png")])
@@ -370,17 +394,8 @@ class ClientsWindow(tk.Toplevel):
         search_term = self.search_var.get()
         params = []
         
-        if self.filter_loan_type:
-            # Filter by loan type (distinct clients with active/overdue loans of that type)
-            query = """
-                SELECT DISTINCT c.* 
-                FROM clients c
-                JOIN loans l ON c.id = l.client_id
-                WHERE l.loan_type = ? AND l.status IN ('active', 'overdue')
-            """
-            params.append(self.filter_loan_type)
-        else:
-            query = "SELECT * FROM clients WHERE 1=1"
+        # Removed strict filtering by loan type to show all clients
+        query = "SELECT * FROM clients WHERE 1=1"
             
         if search_term:
             query += " AND (dni LIKE ? OR first_name LIKE ? OR last_name LIKE ?)"

@@ -1,0 +1,42 @@
+{
+  "session": {
+    "id": 3,
+    "user_id": 1,
+    "opening_balance": 3500.0,
+    "opening_date": "2025-12-15 11:28:18",
+    "closing_balance": null,
+    "closing_date": null,
+    "status": "open",
+    "observation": null
+  },
+  "transactions": [],
+  "capital": [
+    {
+      "id": 3,
+      "target_type": "cash",
+      "target_id": null,
+      "amount": 500.0,
+      "entry_date": "2025-12-15",
+      "description": "prestamo de edgar",
+      "created_at": "2025-12-15 11:28:08"
+    },
+    {
+      "id": 2,
+      "target_type": "bank",
+      "target_id": 4,
+      "amount": 1500.0,
+      "entry_date": "2025-09-01",
+      "description": "inversion saul",
+      "created_at": "2025-12-14 01:43:52"
+    },
+    {
+      "id": 1,
+      "target_type": "cash",
+      "target_id": null,
+      "amount": 2000.0,
+      "entry_date": "2025-09-01",
+      "description": "inverion saul",
+      "created_at": "2025-12-14 01:43:16"
+    }
+  ]
+}
