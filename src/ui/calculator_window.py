@@ -80,21 +80,11 @@ class CalculatorWindow(ModernWindow):
         loan_type = self.combo_loan_type.get()
         
         if loan_type == "Rapidiario":
-            # Rapidiario: Ask for total paid so far
-            tk.Label(self.dynamic_frame, text="Monto Total ya Pagado (S/):", bg='white', font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(0, 5))
-            self.entry_paid = ttk.Entry(self.dynamic_frame, font=("Segoe UI", 11))
-            self.entry_paid.insert(0, "0")
-            self.entry_paid.pack(fill=tk.X, ipady=5)
-            
+            # Rapidiario: Simulator Only
             tk.Label(self.dynamic_frame, text="* El plazo es fijo a 30 días.", bg='white', fg='#666', font=("Segoe UI", 9)).pack(anchor="w", pady=(5, 0))
 
         elif loan_type == "Casa de Empeño":
-            # Empeño: Ask for how many times interest was paid
-            tk.Label(self.dynamic_frame, text="Veces que ha pagado interés:", bg='white', font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(0, 5))
-            self.entry_interest_times = ttk.Entry(self.dynamic_frame, font=("Segoe UI", 11))
-            self.entry_interest_times.insert(0, "0")
-            self.entry_interest_times.pack(fill=tk.X, ipady=5)
-            
+            # Empeño: Simulator Only
             tk.Label(self.dynamic_frame, text="* Se calcula interés mensual desde la fecha inicio.", bg='white', fg='#666', font=("Segoe UI", 9)).pack(anchor="w", pady=(5, 0))
             
         elif loan_type == "Préstamo Bancario":
@@ -126,116 +116,54 @@ class CalculatorWindow(ModernWindow):
             tk.Label(self.right_panel, text=f"Resultados: {loan_type}", bg='white', font=("Segoe UI", 13, "bold"), fg='#2196F3').pack(pady=(0, 20))
             
             if loan_type == "Rapidiario":
-                paid = float(self.entry_paid.get())
+                info = obtener_info_prestamo('rapidiario', amount, rate, start_date)
                 
-                # Logic:
-                # 1. Total Debt = Amount + (Amount * Rate / 100)
-                interest_total = amount * (rate / 100)
-                total_debt_original = amount + interest_total
-                
-                # 2. Balance
-                balance = total_debt_original - paid
-                
-                # 3. Capital vs Interest Split
-                # Assuming simple priority: Pay Interest first? Or Proportional?
-                # User asked: "separando el capital e interes por pagar"
-                # Usually: Interest is prioritized.
-                interest_pending = max(0, interest_total - paid) # If paid < interest, rest is pending interest
-                # If paid > interest, interest is covered, rest goes to capital
-                capital_paid = max(0, paid - interest_total)
-                capital_pending = amount - capital_paid
-                
-                # 4. Dates
-                due_date = start_date + timedelta(days=30)
-                days_remaining = (due_date - today).days
+                total_debt = info['total_pagar']
+                interest_total = info['total_interes']
+                due_date = info['fecha_vencimiento']
+                working_days = info['dias_laborables']
+                first_quota = info['cuotas'][0][2] if info['cuotas'] else 0
                 
                 add_result_row("Monto Prestado:", f"S/ {amount:.2f}")
-                add_result_row("Interés Total Generado:", f"S/ {interest_total:.2f}")
-                add_result_row("Deuda Total Inicial:", f"S/ {total_debt_original:.2f}", font_weight='bold')
+                add_result_row("Interés Total:", f"S/ {interest_total:.2f}")
+                add_result_row("Días de Pago:", f"{working_days} días (Lun-Sáb)")
                 
                 tk.Frame(self.right_panel, bg='#eee', height=2).pack(fill=tk.X, pady=10)
                 
-                add_result_row("Total Pagado:", f"S/ {paid:.2f}", color='#4CAF50')
-                add_result_row("Saldo Pendiente:", f"S/ {balance:.2f}", color='#F44336', font_weight='bold')
+                add_result_row("TOTAL A DEVOLVER:", f"S/ {total_debt:.2f}", color='#2196F3', font_weight='bold')
+                add_result_row("CUOTA DIARIA:", f"S/ {first_quota:.2f}", color='#4CAF50', font_weight='bold')
                 
                 tk.Frame(self.right_panel, bg='#eee', height=1).pack(fill=tk.X, pady=10)
                 
-                tk.Label(self.right_panel, text="Desglose del Saldo:", bg='white', fg='#888', font=("Segoe UI", 9, "bold")).pack(anchor='w')
-                add_result_row("Interés por Pagar:", f"S/ {interest_pending:.2f}", color='#FF9800')
-                add_result_row("Capital por Pagar:", f"S/ {capital_pending:.2f}", color='#FF9800')
+                add_result_row("Fecha de Préstamo:", start_date.strftime("%d/%m/%Y"))
+                add_result_row("Fecha de Vencimiento:", due_date.strftime("%d/%m/%Y"))
                 
-                tk.Frame(self.right_panel, bg='#eee', height=2).pack(fill=tk.X, pady=10)
-                
-                add_result_row("Fecha Pago (30 días):", due_date.strftime("%d/%m/%Y"))
-                
-                if days_remaining > 0:
-                    add_result_row("Días Faltantes:", f"{days_remaining} días", color='#2196F3')
-                elif days_remaining == 0:
-                    add_result_row("Estado:", "Vence Hoy", color='#FF9800', font_weight='bold')
-                else:
-                    add_result_row("Estado:", f"Vencido hace {abs(days_remaining)} días", color='#F44336', font_weight='bold')
+                # Button to Print Schedule
+                tk.Button(self.right_panel, text="🖨️ IMPRIMIR CRONOGRAMA", 
+                         command=lambda: self.print_schedule(info['cuotas'], amount, total_debt, "Rapidiario", start_date, rate),
+                         bg='#607D8B', fg='white', relief='flat', font=("Segoe UI", 9, "bold")).pack(pady=20, fill=tk.X)
 
             elif loan_type == "Casa de Empeño":
-                times_paid = int(self.entry_interest_times.get())
-                
-                # Logic:
-                # Interest is monthly.
-                # Months elapsed = ceil((Today - Start) / 30) ? Or simply calendar months?
-                # User says: "si se presta un 10 de julio paga el 10 de agosto".
-                # Calculate full months elapsed since start.
-                
-                # Exact calculation of months elapsed
-                months_elapsed = (today.year - start_date.year) * 12 + today.month - start_date.month
-                
-                # If day of month is passed, add 1 month?
-                # E.g. Start Jan 10. Today Feb 11. That's 1 month fully passed, entering 2nd.
-                # User wants "sumar hasta la fecha cuanto ya debe en intereses".
-                # Usually this means accrued interest.
-                # Let's count full periods passed + current running period.
-                
-                # Simple logic: If today > start_date, at least 1 month interest is running/due eventually.
-                # But for accrued debt:
-                # If we are in month 1 (day 1 to 29), owe 1 month interest? Or daily?
-                # Empeño usually is "Mes cumplido" or "Mes adelantado"?
-                # Let's assume proportional or full month logic. "sumar hasta la fecha cuanto ya debe".
-                
-                # Let's use exact float months for precision or ceiling for "periods started".
-                # Standard pawn shop: 1 day into new month = full month interest.
-                # Let's calculate months started.
-                
+                # Logic: Interest is monthly.
                 if today < start_date:
                      months_to_charge = 0
                 else:
-                    # Calculate exact difference in months
                     diff = (today.year - start_date.year) * 12 + today.month - start_date.month
                     if today.day > start_date.day:
                         diff += 1
-                    # If today is same day, it's exactly that many months.
-                    # But usually if you pay ON the day, you pay for the past month.
-                    # If you pay day after, new month starts.
-                    months_to_charge = max(1, diff) # At least 1 month if started
-                    
-                    # Wait, if I borrow today, do I owe interest immediately? Usually yes (deducted) or at end.
-                    # Assuming payment at end.
+                    months_to_charge = max(1, diff)
                     
                 interest_per_month = amount * (rate / 100)
                 total_interest_generated = months_to_charge * interest_per_month
                 
-                total_interest_paid = times_paid * interest_per_month
-                interest_debt = total_interest_generated - total_interest_paid
-                
-                # Capital is usually constant until end
-                capital_debt = amount 
+                # Assume 0 paid
+                interest_debt = total_interest_generated
+                capital_debt = amount
+                total_due = capital_debt + interest_debt
                 
                 # Next payment date
-                # Start: 10 July.
-                # If today is 20 July. Next pay: 10 Aug.
-                # If today is 15 Aug. Next pay: 10 Sept.
-                # Logic: Find next day matching start_date.day
-                
                 next_due_month = today.month
                 next_due_year = today.year
-                
                 if today.day >= start_date.day:
                     next_due_month += 1
                 
@@ -246,7 +174,6 @@ class CalculatorWindow(ModernWindow):
                 try:
                     next_due_date = date(next_due_year, next_due_month, start_date.day)
                 except ValueError:
-                    # Handle Feb 30 etc
                     import calendar
                     last_day = calendar.monthrange(next_due_year, next_due_month)[1]
                     next_due_date = date(next_due_year, next_due_month, last_day)
@@ -257,24 +184,77 @@ class CalculatorWindow(ModernWindow):
                 tk.Frame(self.right_panel, bg='#eee', height=2).pack(fill=tk.X, pady=10)
 
                 add_result_row("Meses Transcurridos:", f"{months_to_charge}")
-                add_result_row("Interés Total Generado:", f"S/ {total_interest_generated:.2f}")
-                add_result_row("Interés Ya Pagado:", f"S/ {total_interest_paid:.2f} ({times_paid} veces)", color='#4CAF50')
+                add_result_row("Interés Acumulado:", f"S/ {total_interest_generated:.2f}")
                 
                 tk.Frame(self.right_panel, bg='#eee', height=1).pack(fill=tk.X, pady=10)
                 
-                add_result_row("DEUDA INTERÉS ACTUAL:", f"S/ {interest_debt:.2f}", color='#F44336', font_weight='bold')
-                add_result_row("DEUDA CAPITAL:", f"S/ {capital_debt:.2f}", font_weight='bold')
-                
-                total_to_liquidate = capital_debt + interest_debt
-                add_result_row("TOTAL PARA RETIRAR:", f"S/ {total_to_liquidate:.2f}", color='#2196F3', font_weight='bold')
+                add_result_row("DEUDA TOTAL HOY:", f"S/ {total_due:.2f}", color='#F44336', font_weight='bold')
                 
                 tk.Frame(self.right_panel, bg='#eee', height=2).pack(fill=tk.X, pady=10)
                 add_result_row("Próximo Vencimiento:", next_due_date.strftime("%d/%m/%Y"))
+                
+                # Construct a logical schedule for printing: 1 item "Pago Total Hoy"
+                # Showing the Next Due Date is better for "Cronograma Proyectado"
+                
+                cuotas_empeno = [
+                    (1, next_due_date, total_due) # Payment due on the next expiration date
+                ]
+                
+                tk.Button(self.right_panel, text="🖨️ IMPRIMIR LIQUIDACIÓN (PDF)", 
+                         command=lambda: self.print_schedule(cuotas_empeno, amount, total_due, "Casa de Empeño", start_date, rate),
+                         bg='#607D8B', fg='white', relief='flat', font=("Segoe UI", 9, "bold")).pack(pady=20, fill=tk.X)
 
             elif loan_type == "Préstamo Bancario":
-                # Basic info
-                pass
+                months = int(self.entry_months.get())
+                
+                info = obtener_info_prestamo('bancario', amount, rate, start_date, meses=months)
+                
+                total_debt = info['total_pagar']
+                total_interest = info['total_interes']
+                monthly_quota = info['cuotas'][0][2] if info['cuotas'] else 0
+                
+                add_result_row("Monto Prestado:", f"S/ {amount:.2f}")
+                add_result_row("Plazo:", f"{months} meses")
+                add_result_row("Tasa Mensual:", f"{rate}%")
+                
+                tk.Frame(self.right_panel, bg='#eee', height=2).pack(fill=tk.X, pady=10)
+                
+                add_result_row("Interés Total:", f"S/ {total_interest:.2f}")
+                add_result_row("TOTAL A PAGAR:", f"S/ {total_debt:.2f}", color='#2196F3', font_weight='bold')
+                
+                tk.Frame(self.right_panel, bg='#eee', height=1).pack(fill=tk.X, pady=10)
+                
+                add_result_row("CUOTA MENSUAL:", f"S/ {monthly_quota:.2f}", color='#4CAF50', font_weight='bold')
+                
+                # Button to Print Schedule
+                tk.Button(self.right_panel, text="🖨️ IMPRIMIR CRONOGRAMA", 
+                         command=lambda: self.print_schedule(info['cuotas'], amount, total_debt, "Préstamo Bancario", start_date, rate),
+                         bg='#607D8B', fg='white', relief='flat', font=("Segoe UI", 9, "bold")).pack(pady=20, fill=tk.X)
 
         except ValueError:
             messagebox.showerror("Error", "Por favor verifique que todos los campos numéricos sean correctos.")
 
+    def print_schedule(self, cuotas, amount, total, type_name, start_date, rate):
+        try:
+            generator = PDFGenerator()
+            
+            # Prepare data for generate_simulation_report
+            simulation_data = {
+                'monto': amount,
+                'total_pagar': total,
+                'total_interes': total - amount,
+                'tipo': type_name,
+                'tasa': rate,
+                'fecha_inicio': start_date
+            }
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"cronograma_simulado_{timestamp}.pdf"
+            filepath = os.path.join(generator.reports_dir, filename)
+            
+            # Use existing method
+            path = generator.generate_simulation_report(filepath, simulation_data, cuotas)
+            os.startfile(path)
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al generar cronograma: {e}")
