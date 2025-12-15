@@ -7,8 +7,9 @@ from datetime import datetime
 import os
 
 class NotificationsWindow(ModernWindow):
-    def __init__(self, parent):
+    def __init__(self, parent, user_data=None):
         super().__init__(parent, title="Generar Notificaciones", width=900, height=700)
+        self.user_data = user_data or {}
         self.create_widgets()
 
     def create_widgets(self):

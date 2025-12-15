@@ -13,28 +13,40 @@ from database import get_db_connection, init_db, DB_PATH
 
 class TestBackupRestore(unittest.TestCase):
     def setUp(self):
-        # Backup existing DB
-        if os.path.exists(DB_PATH):
-            shutil.copy2(DB_PATH, DB_PATH + ".bak_test")
+        # Use a separate test database file
+        import database
+        self.original_db_path = database.DB_PATH
+        self.test_db_path = os.path.join(os.path.dirname(database.DB_PATH), 'test_system.db')
+        database.DB_PATH = self.test_db_path
         
         # Init fresh DB
-        if os.path.exists(DB_PATH):
-            os.remove(DB_PATH)
+        if os.path.exists(self.test_db_path):
+            try:
+                os.remove(self.test_db_path)
+            except:
+                pass # Best effort
+                
         init_db()
         
         # Insert some test data
         conn = get_db_connection()
-        conn.execute("INSERT INTO settings (key, value) VALUES ('test_key', 'test_value')")
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('test_key', 'test_value')")
         conn.commit()
         conn.close()
         
         self.bm = BackupManager()
 
     def tearDown(self):
-        # Restore original DB
-        if os.path.exists(DB_PATH + ".bak_test"):
-            shutil.copy2(DB_PATH + ".bak_test", DB_PATH)
-            os.remove(DB_PATH + ".bak_test")
+        # Restore original DB path
+        import database
+        database.DB_PATH = self.original_db_path
+        
+        # Remove test DB
+        if os.path.exists(self.test_db_path):
+            try:
+                os.remove(self.test_db_path)
+            except:
+                pass
 
     def test_json_backup_restore(self):
         print("\nTesting JSON Backup & Restore...")
@@ -54,7 +66,9 @@ class TestBackupRestore(unittest.TestCase):
         
         # Restore
         print(f"Restoring from {backup_file}...")
-        success = self.bm.restore_database(backup_file)
+        success, message = self.bm.restore_database(backup_file)
+        print(f"Restore Result: {success}, Message: {message}")
+        
         self.assertTrue(success)
         
         # Verify
@@ -79,16 +93,11 @@ class TestBackupRestore(unittest.TestCase):
         
         # Restore
         print(f"Restoring from {os.path.basename(backup_path)}...")
-        success = self.bm.restore_database(os.path.basename(backup_path))
+        success, message = self.bm.restore_database(os.path.basename(backup_path))
+        print(f"Restore Result: {success}, Message: {message}")
         
         if not success:
-            print("Excel restore failed. Checking possible reasons...")
-            # Check if pandas supports sqlite3 connection
-            try:
-                import pandas as pd
-                print(f"Pandas version: {pd.__version__}")
-            except ImportError:
-                print("Pandas not installed.")
+            print(f"Excel restore failed: {message}")
         
         self.assertTrue(success)
         
@@ -99,9 +108,7 @@ class TestBackupRestore(unittest.TestCase):
         self.assertEqual(row['value'], 'test_value')
         print("Excel Restore Verified.")
 
-
 if __name__ == '__main__':
     with open('results.txt', 'w', encoding='utf-8') as f:
         runner = unittest.TextTestRunner(stream=f, verbosity=2)
         unittest.main(testRunner=runner, exit=False)
-

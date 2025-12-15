@@ -398,11 +398,11 @@ class AnalyticsManager:
         
         # Obtener todos los pagos del cliente
         cursor.execute("""
-            SELECT i.amount_paid, l.loan_type, l.amount as capital, 
+            SELECT i.paid_amount, l.loan_type, l.amount as capital, 
                    l.interest_rate, l.status, l.frozen_amount
             FROM installments i
             JOIN loans l ON i.loan_id = l.id
-            WHERE l.client_id = ? AND i.amount_paid > 0
+            WHERE l.client_id = ? AND i.paid_amount > 0
         """, (client_id,))
         
         payments = cursor.fetchall()

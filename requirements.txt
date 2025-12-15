@@ -9,3 +9,4 @@ pywin32
 matplotlib
 pandas
 requests
+openpyxl

@@ -9,6 +9,7 @@ from database import get_db_connection
 import threading
 import time
 from datetime import datetime
+from utils.notification_manager import generate_due_notifications
 
 from ui.clients_window import ClientsWindow
 from ui.loans_window import LoansWindow
@@ -211,7 +212,15 @@ class MainWindow(tk.Toplevel):
         self.check_notifications()
         self.start_notification_timer()
 
+
+
     def check_notifications(self):
+        # Generate due notifications first
+        try:
+            generate_due_notifications(self.user_data.get('id'))
+        except Exception as e:
+            print(f"Error generating automatic notifications: {e}")
+
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
@@ -220,7 +229,7 @@ class MainWindow(tk.Toplevel):
                 SELECT n.id, n.notify_date, n.description, u.username 
                 FROM notifications n
                 LEFT JOIN users u ON n.created_by = u.id
-                WHERE n.is_done = 0 OR n.is_done = FALSE
+                WHERE n.is_done = FALSE
             """)
             rows = cursor.fetchall()
             

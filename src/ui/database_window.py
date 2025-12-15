@@ -269,11 +269,12 @@ class DatabaseWindow(ModernWindow):
 
             from utils.backup_manager import BackupManager
             bm = BackupManager()
-            if bm.restore_database(filename):
+            success, message = bm.restore_database(filename)
+            if success:
                 messagebox.showinfo("Restauración Exitosa", "La base de datos ha sido restaurada.\nLa aplicación se reiniciará ahora.")
                 self.restart_application()
             else:
-                messagebox.showerror("Error", "Ocurrió un error al restaurar la base de datos.")
+                messagebox.showerror("Error", f"Ocurrió un error al restaurar la base de datos:\n{message}")
 
     def import_backup(self):
         from tkinter import filedialog
@@ -289,11 +290,12 @@ class DatabaseWindow(ModernWindow):
 
                 from utils.backup_manager import BackupManager
                 bm = BackupManager()
-                if bm.restore_database(filename):
+                success, message = bm.restore_database(filename)
+                if success:
                     messagebox.showinfo("Restauración Exitosa", "La base de datos ha sido restaurada.\nLa aplicación se reiniciará ahora.")
                     self.restart_application()
                 else:
-                    messagebox.showerror("Error", "Ocurrió un error al restaurar la base de datos.")
+                    messagebox.showerror("Error", f"Ocurrió un error al restaurar la base de datos:\n{message}")
 
     def reset_system(self):
         if messagebox.askyesno("⚠️ PELIGRO: RESETEAR SISTEMA", 
