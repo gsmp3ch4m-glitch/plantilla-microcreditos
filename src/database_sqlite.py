@@ -141,6 +141,65 @@ def init_db():
         cursor.execute("ALTER TABLE pawn_details ADD COLUMN condition TEXT")
         cursor.execute("ALTER TABLE pawn_details ADD COLUMN market_value REAL")
 
+    # Fixed Assets table (Activos Fijos)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS fixed_assets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            purchase_date DATE,
+            value REAL NOT NULL,
+            status TEXT DEFAULT 'active', -- 'active', 'sold', 'discarded'
+            category TEXT DEFAULT 'equipment', -- 'equipment', 'startup'
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Check if category column exists (migration)
+    try:
+        cursor.execute("SELECT category FROM fixed_assets LIMIT 1")
+    except sqlite3.OperationalError:
+        cursor.execute("ALTER TABLE fixed_assets ADD COLUMN category TEXT DEFAULT 'equipment'")
+
+    # Bank Accounts table (Cuentas Corrientes)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS bank_accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            bank_name TEXT NOT NULL,
+            account_number TEXT,
+            holder_name TEXT,
+            balance REAL DEFAULT 0.0,
+            currency TEXT DEFAULT 'PEN',
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Bank Transactions table (Historial Bancario)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS bank_transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            bank_account_id INTEGER NOT NULL,
+            type TEXT NOT NULL, -- 'income' (ingreso), 'expense' (gasto)
+            amount REAL NOT NULL,
+            description TEXT,
+            transaction_date DATE DEFAULT CURRENT_DATE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (bank_account_id) REFERENCES bank_accounts (id)
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS capital_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            target_type TEXT NOT NULL, -- 'cash' or 'bank'
+            target_id INTEGER, -- bank_account table id (nullable if cash)
+            amount REAL NOT NULL,
+            entry_date DATE DEFAULT CURRENT_DATE,
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
     # Transactions table (Caja)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS transactions (
@@ -156,6 +215,34 @@ def init_db():
             FOREIGN KEY (loan_id) REFERENCES loans (id)
         )
     ''')
+    
+    # Manual Receivables (Deudas Antiguas/Externas)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS manual_receivables (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_name TEXT NOT NULL,
+            client_id INTEGER, -- Optional link to existing client
+            concept TEXT, 
+            modality TEXT DEFAULT 'Rapidiario', -- 'Rapidiario', 'Casa de Empeño', 'Bancarizado', 'Congelado'
+            amount_lent REAL DEFAULT 0,
+            interest REAL DEFAULT 0,
+            total_debt REAL NOT NULL,
+            paid_amount REAL DEFAULT 0,
+            balance REAL NOT NULL,
+            status TEXT DEFAULT 'pending',
+            loan_date DATE DEFAULT CURRENT_DATE, -- Fecha Prestamo
+            due_date DATE DEFAULT CURRENT_DATE, -- Fecha Vencimiento
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Check for missing columns in existing table (Migration)
+    try:
+        cursor.execute("SELECT modality FROM manual_receivables LIMIT 1")
+    except sqlite3.OperationalError:
+        cursor.execute("ALTER TABLE manual_receivables ADD COLUMN modality TEXT DEFAULT 'Rapidiario'")
+        cursor.execute("ALTER TABLE manual_receivables ADD COLUMN loan_date DATE DEFAULT CURRENT_DATE")
+        cursor.execute("ALTER TABLE manual_receivables ADD COLUMN client_id INTEGER")
 
     # Cash Sessions table
     cursor.execute('''
@@ -254,17 +341,21 @@ def init_db():
         # Visibility (1=Visible, 0=Hidden)
         ('mod_clients_visible', '1', 'Visible Clientes'),
         ('mod_cash_visible', '1', 'Visible Caja'),
+        ('mod_assets_visible', '1', 'Visible Activos'), # New Module
         ('mod_config_visible', '1', 'Visible Configuración'),
-        ('mod_loan1_visible', '1', 'Visible Préstamo 1'), # Mandatory
         
+        # Unified Loans Module
+        ('mod_loans_visible', '1', 'Visible Préstamos (Menú Principal)'),
+        
+        ('mod_loan1_visible', '1', 'Visible Préstamo 1'), # Mandatory
         ('mod_loan2_visible', '1', 'Visible Préstamo 2'),
         ('mod_loan3_visible', '1', 'Visible Préstamo 3'),
-        ('mod_loan4_visible', '0', 'Visible Préstamo 4'),
+        ('mod_loan4_visible', '1', 'Visible Préstamo 4 (Congelados)'),
         ('mod_loan5_visible', '0', 'Visible Préstamo 5'),
         
         ('mod_calc_visible', '1', 'Visible Calculadora'),
         ('mod_analysis_visible', '1', 'Visible Análisis'),
-        ('mod_docs_visible', '0', 'Visible Documentos'),
+        ('mod_docs_visible', '1', 'Visible Documentos'),
         ('mod_db_visible', '1', 'Visible Base de Datos'), # Added default visible
         ('mod_notif_visible', '1', 'Visible Notificaciones'), # Added default visible
         ('mod_other1_visible', '0', 'Visible Otros 1'),
@@ -273,6 +364,7 @@ def init_db():
         # Labels (Customizable Names)
         ('label_clients', 'Clientes', 'Etiqueta Clientes'),
         ('label_cash', 'Caja', 'Etiqueta Caja'),
+        ('label_assets', 'Activos', 'Etiqueta Activos'),
         ('label_config', 'Configuración', 'Etiqueta Configuración'),
         
         ('label_loan1', 'Casa de Empeño', 'Etiqueta Préstamo 1'),

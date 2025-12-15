@@ -1,0 +1,7 @@
+test_excel_backup_restore (__main__.TestBackupRestore.test_excel_backup_restore) ... ok
+test_json_backup_restore (__main__.TestBackupRestore.test_json_backup_restore) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.637s
+
+OK

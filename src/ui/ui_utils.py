@@ -267,7 +267,9 @@ def get_module_colors(theme_name='turquesa'):
             'Análisis': '#E91E63',
             'Configuración': '#F39C12',
             'Base de Datos': '#5C6BC0',
-            'Documentos': '#CDDC39'
+            'Base de Datos': '#5C6BC0',
+            'Documentos': '#CDDC39',
+            'Activos': '#009688'
         }
     elif theme_name == 'oscuro':
         return {
@@ -282,7 +284,9 @@ def get_module_colors(theme_name='turquesa'):
             'Análisis': '#F06292',
             'Configuración': '#FFD54F',
             'Base de Datos': '#9575CD',
-            'Documentos': '#DCE775'
+            'Base de Datos': '#9575CD',
+            'Documentos': '#DCE775',
+            'Activos': '#80CBC4'
         }
     else:
         return {
@@ -297,7 +301,9 @@ def get_module_colors(theme_name='turquesa'):
             'Análisis': '#E91E63',
             'Configuración': '#FFC107',
             'Base de Datos': '#673AB7',
-            'Documentos': '#8BC34A'
+            'Base de Datos': '#673AB7',
+            'Documentos': '#8BC34A',
+            'Activos': '#009688'
         }
 
 def get_module_icon(module_name):
@@ -314,7 +320,58 @@ def get_module_icon(module_name):
         'Análisis': '📊',
         'Configuración': '⚙️',
         'Base de Datos': '🗄️',
-        'Documentos': '📄'
+        'Base de Datos': '🗄️',
+        'Documentos': '📄',
+        'Activos': '💎'
     }
     return icons.get(module_name, '📌')
+
+
+class ModernButton(tk.Frame):
+    """Botón moderno con icono y color personalizado."""
+    def __init__(self, parent, text, icon, color, command, **kwargs):
+        super().__init__(parent, bg=color, **kwargs)
+        self.color = color
+        self.hover_color = self.lighten_color(color)
+        self.command = command
+        
+        # Configurar tamaño
+        self.config(width=240, height=100, relief='flat', bd=0)
+        self.pack_propagate(False)
+        
+        # Icono
+        icon_label = tk.Label(self, text=icon, font=("Segoe UI Emoji", 28), 
+                             bg=color, fg='white')
+        icon_label.pack(pady=(15, 5))
+        
+        # Texto
+        text_label = tk.Label(self, text=text, font=("Segoe UI", 11, "bold"), 
+                             bg=color, fg='white')
+        text_label.pack()
+        
+        # Bind events
+        for widget in [self, icon_label, text_label]:
+            widget.bind('<Button-1>', lambda e: self.command())
+            widget.bind('<Enter>', self.on_enter)
+            widget.bind('<Leave>', self.on_leave)
+        
+        self.icon_label = icon_label
+        self.text_label = text_label
+    
+    def on_enter(self, event):
+        self.config(bg=self.hover_color)
+        self.icon_label.config(bg=self.hover_color)
+        self.text_label.config(bg=self.hover_color)
+    
+    def on_leave(self, event):
+        self.config(bg=self.color)
+        self.icon_label.config(bg=self.color)
+        self.text_label.config(bg=self.color)
+    
+    def lighten_color(self, hex_color, factor=0.15):
+        """Aclara un color hexadecimal."""
+        hex_color = hex_color.lstrip('#')
+        rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        new_rgb = tuple(min(255, int(c + (255 - c) * factor)) for c in rgb)
+        return f'#{new_rgb[0]:02x}{new_rgb[1]:02x}{new_rgb[2]:02x}'
 

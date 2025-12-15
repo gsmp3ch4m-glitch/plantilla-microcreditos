@@ -130,8 +130,11 @@ class DatabaseWindow(ModernWindow):
         left_frame = tk.LabelFrame(admin_container, text="Copias de Seguridad", bg=self.card_bg, fg=self.text_color, font=("Segoe UI", 10, "bold"))
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
         
-        tk.Button(left_frame, text="💾 Crear Copia de Seguridad Ahora", command=self.create_backup,
-                 bg="#4CAF50", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", padx=10, pady=5).pack(pady=10)
+        tk.Button(left_frame, text="💾 Crear Copia de Seguridad (JSON)", command=self.create_backup,
+                 bg="#4CAF50", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", padx=10, pady=5).pack(pady=(10, 5))
+                 
+        tk.Button(left_frame, text="📊 Exportar a Excel", command=self.create_excel_backup,
+                 bg="#2E7D32", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", padx=10, pady=5).pack(pady=5)
         
         # Show path
         from utils.backup_manager import BackupManager
@@ -235,8 +238,18 @@ class DatabaseWindow(ModernWindow):
         from utils.backup_manager import BackupManager
         bm = BackupManager()
         bm.create_backup(trigger='manual')
-        messagebox.showinfo("Éxito", "Copia de seguridad creada correctamente.")
+        messagebox.showinfo("Éxito", "Copia de seguridad (JSON) creada correctamente.")
         self.load_backups()
+
+    def create_excel_backup(self):
+        from utils.backup_manager import BackupManager
+        bm = BackupManager()
+        path = bm.create_excel_backup(trigger='manual')
+        if path:
+            messagebox.showinfo("Éxito", f"Reporte Excel creado en:\n{path}")
+            self.load_backups()
+        else:
+            messagebox.showerror("Error", "No se pudo crear el archivo Excel.")
 
     def restore_selected(self):
         selection = self.backup_tree.selection()
@@ -264,7 +277,7 @@ class DatabaseWindow(ModernWindow):
 
     def import_backup(self):
         from tkinter import filedialog
-        filename = filedialog.askopenfilename(filetypes=[("Database Files", "*.db")])
+        filename = filedialog.askopenfilename(filetypes=[("Backup Files", "*.db *.json *.xlsx"), ("Database", "*.db"), ("JSON", "*.json"), ("Excel", "*.xlsx")])
         if filename:
             if messagebox.askyesno("Confirmar Importación", 
                                   f"¿Está seguro que desea restaurar desde el archivo seleccionado?\n\n"

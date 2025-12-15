@@ -1,0 +1,16 @@
+ERROR: Error backing up table users: 'sqlite3.Row' object has no attribute 'items'
+ERROR: Error backing up table settings: 'sqlite3.Row' object has no attribute 'items'
+DEBUG: Processing table clients
+DEBUG: Table clients has 0 rows to insert
+DEBUG: Processing table loans
+DEBUG: Table loans has 0 rows to insert
+DEBUG: Processing table pawn_details
+DEBUG: Table pawn_details has 0 rows to insert
+DEBUG: Processing table transactions
+DEBUG: Table transactions has 0 rows to insert
+DEBUG: Processing table cash_sessions
+DEBUG: Table cash_sessions has 0 rows to insert
+DEBUG: Processing table installments
+DEBUG: Table installments has 0 rows to insert
+DEBUG: Processing table audit_logs
+DEBUG: Table audit_logs has 0 rows to insert

@@ -1,0 +1,278 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password": "admin123",
+      "role": "admin",
+      "full_name": "Administrador Principal",
+      "analyst_name": null,
+      "analyst_phone": null,
+      "permissions": "all"
+    }
+  ],
+  "clients": [],
+  "loans": [],
+  "pawn_details": [],
+  "transactions": [],
+  "cash_sessions": [],
+  "installments": [],
+  "settings": [
+    {
+      "key": "company_name",
+      "value": "Mi Empresa S.A.C.",
+      "description": "Nombre de la Empresa"
+    },
+    {
+      "key": "company_registry",
+      "value": "",
+      "description": "Partida Registral"
+    },
+    {
+      "key": "company_ruc",
+      "value": "20123456789",
+      "description": "RUC"
+    },
+    {
+      "key": "company_manager",
+      "value": "",
+      "description": "Gerente General"
+    },
+    {
+      "key": "manager_dni",
+      "value": "",
+      "description": "DNI del Gerente"
+    },
+    {
+      "key": "company_address",
+      "value": "Av. Principal 123",
+      "description": "Dirección de la Empresa"
+    },
+    {
+      "key": "company_phone",
+      "value": "999 999 999",
+      "description": "Teléfono de la Empresa"
+    },
+    {
+      "key": "company_phone2",
+      "value": "",
+      "description": "Teléfono de la Empresa 2"
+    },
+    {
+      "key": "manager_phone",
+      "value": "",
+      "description": "Teléfono del Gerente"
+    },
+    {
+      "key": "manager_address",
+      "value": "",
+      "description": "Dirección del Gerente"
+    },
+    {
+      "key": "analyst_name",
+      "value": "Analista",
+      "description": "Nombre del Analista"
+    },
+    {
+      "key": "analyst_phone",
+      "value": "999 999 999",
+      "description": "Teléfono del Analista"
+    },
+    {
+      "key": "interest_pawn",
+      "value": "5.0",
+      "description": "Tasa de Interés - Empeño (%)"
+    },
+    {
+      "key": "interest_bank",
+      "value": "10.0",
+      "description": "Tasa de Interés - Bancario (%)"
+    },
+    {
+      "key": "interest_rapid",
+      "value": "20.0",
+      "description": "Tasa de Interés - Rapidiario (%)"
+    },
+    {
+      "key": "company_initial_cash",
+      "value": "0.00",
+      "description": "Dinero Inicial de la Empresa"
+    },
+    {
+      "key": "mod_clients_visible",
+      "value": "1",
+      "description": "Visible Clientes"
+    },
+    {
+      "key": "mod_cash_visible",
+      "value": "1",
+      "description": "Visible Caja"
+    },
+    {
+      "key": "mod_assets_visible",
+      "value": "1",
+      "description": "Visible Activos"
+    },
+    {
+      "key": "mod_config_visible",
+      "value": "1",
+      "description": "Visible Configuración"
+    },
+    {
+      "key": "mod_loans_visible",
+      "value": "1",
+      "description": "Visible Préstamos (Menú Principal)"
+    },
+    {
+      "key": "mod_loan1_visible",
+      "value": "1",
+      "description": "Visible Préstamo 1"
+    },
+    {
+      "key": "mod_loan2_visible",
+      "value": "1",
+      "description": "Visible Préstamo 2"
+    },
+    {
+      "key": "mod_loan3_visible",
+      "value": "1",
+      "description": "Visible Préstamo 3"
+    },
+    {
+      "key": "mod_loan4_visible",
+      "value": "1",
+      "description": "Visible Préstamo 4 (Congelados)"
+    },
+    {
+      "key": "mod_loan5_visible",
+      "value": "0",
+      "description": "Visible Préstamo 5"
+    },
+    {
+      "key": "mod_calc_visible",
+      "value": "1",
+      "description": "Visible Calculadora"
+    },
+    {
+      "key": "mod_analysis_visible",
+      "value": "1",
+      "description": "Visible Análisis"
+    },
+    {
+      "key": "mod_docs_visible",
+      "value": "1",
+      "description": "Visible Documentos"
+    },
+    {
+      "key": "mod_db_visible",
+      "value": "1",
+      "description": "Visible Base de Datos"
+    },
+    {
+      "key": "mod_notif_visible",
+      "value": "1",
+      "description": "Visible Notificaciones"
+    },
+    {
+      "key": "mod_other1_visible",
+      "value": "0",
+      "description": "Visible Otros 1"
+    },
+    {
+      "key": "mod_other2_visible",
+      "value": "0",
+      "description": "Visible Otros 2"
+    },
+    {
+      "key": "label_clients",
+      "value": "Clientes",
+      "description": "Etiqueta Clientes"
+    },
+    {
+      "key": "label_cash",
+      "value": "Caja",
+      "description": "Etiqueta Caja"
+    },
+    {
+      "key": "label_assets",
+      "value": "Activos",
+      "description": "Etiqueta Activos"
+    },
+    {
+      "key": "label_config",
+      "value": "Configuración",
+      "description": "Etiqueta Configuración"
+    },
+    {
+      "key": "label_loan1",
+      "value": "Casa de Empeño",
+      "description": "Etiqueta Préstamo 1"
+    },
+    {
+      "key": "label_loan2",
+      "value": "Préstamo Bancario",
+      "description": "Etiqueta Préstamo 2"
+    },
+    {
+      "key": "label_loan3",
+      "value": "Rapidiario",
+      "description": "Etiqueta Préstamo 3"
+    },
+    {
+      "key": "label_loan4",
+      "value": "Préstamo 4",
+      "description": "Etiqueta Préstamo 4"
+    },
+    {
+      "key": "label_loan5",
+      "value": "Préstamo 5",
+      "description": "Etiqueta Préstamo 5"
+    },
+    {
+      "key": "label_calc",
+      "value": "Calculadora",
+      "description": "Etiqueta Calculadora"
+    },
+    {
+      "key": "label_analysis",
+      "value": "Análisis",
+      "description": "Etiqueta Análisis"
+    },
+    {
+      "key": "label_notif",
+      "value": "Notificaciones",
+      "description": "Etiqueta Notificaciones"
+    },
+    {
+      "key": "label_docs",
+      "value": "Documentos",
+      "description": "Etiqueta Documentos"
+    },
+    {
+      "key": "label_db",
+      "value": "Base de Datos",
+      "description": "Etiqueta Base de Datos"
+    },
+    {
+      "key": "label_other1",
+      "value": "Otros 1",
+      "description": "Etiqueta Otros 1"
+    },
+    {
+      "key": "label_other2",
+      "value": "Otros 2",
+      "description": "Etiqueta Otros 2"
+    },
+    {
+      "key": "app_theme",
+      "value": "light",
+      "description": "Tema de la Aplicación"
+    },
+    {
+      "key": "test_key",
+      "value": "test_value",
+      "description": null
+    }
+  ],
+  "audit_logs": []
+}
