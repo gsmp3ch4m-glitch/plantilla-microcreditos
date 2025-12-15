@@ -159,6 +159,10 @@ class ConfigWindow(tk.Toplevel):
         on_role_change(None) # Init
         
         def save():
+            # Security Check
+            if not self.verify_user_password():
+                return
+
             # Validation
             if not e_user.get() or not e_pass.get() or not e_name.get():
                 messagebox.showerror("Error", "Por favor complete todos los campos")
@@ -289,6 +293,10 @@ class ConfigWindow(tk.Toplevel):
         e_pass.pack(fill=tk.X, ipady=5, pady=(0, 15))
         
         def save():
+            # Security Check
+            if not self.verify_user_password():
+                return
+
             if not e_name.get():
                 messagebox.showerror("Error", "El nombre completo es obligatorio")
                 return
@@ -360,6 +368,10 @@ class ConfigWindow(tk.Toplevel):
                                    "Esta acción no se puede deshacer."):
             return
         
+        # Confirm Action with Password
+        if not self.verify_user_password():
+            return
+
         # Delete user
         conn = get_db_connection()
         try:
@@ -405,6 +417,10 @@ class ConfigWindow(tk.Toplevel):
         e_conf.pack(fill=tk.X, ipady=10, pady=(0, 20))  # Reduced spacing
         
         def save():
+            # Security Check
+            if not self.verify_user_password():
+                return
+
             if not e_new.get() or not e_conf.get():
                 messagebox.showerror("Error", "Por favor complete ambos campos")
                 return
@@ -545,12 +561,8 @@ class ConfigWindow(tk.Toplevel):
         tk.Button(btn_frame, text="Desconectar (Modo Local)", command=self.disconnect_cloud, bg="#f44336", fg="white").pack(side=tk.LEFT, padx=5)
 
     def connect_cloud(self):
-        # Ask for admin password
-        password = self.ask_admin_password()
-        if not password: return
-        if not self.verify_admin(password):
-            messagebox.showerror("Error", "Contraseña incorrecta")
-            return
+        if not self.verify_user_password():
+             return
 
         # Save secrets
         secrets = {
@@ -578,12 +590,8 @@ class ConfigWindow(tk.Toplevel):
             messagebox.showerror("Error", f"No se pudo guardar la configuración: {e}")
 
     def disconnect_cloud(self):
-        # Ask for admin password
-        password = self.ask_admin_password()
-        if not password: return
-        if not self.verify_admin(password):
-            messagebox.showerror("Error", "Contraseña incorrecta")
-            return
+        if not self.verify_user_password():
+             return
             
         if not messagebox.askyesno("Confirmar", "¿Volver a modo local? Dejará de ver los datos de la nube."):
             return
@@ -607,53 +615,72 @@ class ConfigWindow(tk.Toplevel):
             messagebox.showerror("Error", f"Error: {e}")
 
     def save_company_settings(self):
-        # Ask for admin password
-        password = self.ask_admin_password()
-        if not password: return
+        if not self.verify_user_password():
+             return
 
-        if self.verify_admin(password):
-            for key, entry in self.company_entries.items():
-                update_setting(key, entry.get())
-            
-            # Log Action
-            from database import log_action
-            log_action(self.user_data['id'], "Configuración Empresa", "Datos de empresa actualizados")
-            
-            messagebox.showinfo("Éxito", "Datos de empresa actualizados")
-        else:
-            messagebox.showerror("Error", "Contraseña de administrador incorrecta")
+        for key, entry in self.company_entries.items():
+            update_setting(key, entry.get())
+        
+        # Log Action
+        from database import log_action
+        log_action(self.user_data['id'], "Configuración Empresa", "Datos de empresa actualizados")
+        
+        messagebox.showinfo("Éxito", "Datos de empresa actualizados")
 
-    def ask_admin_password(self):
+    def verify_user_password(self):
+        """Solicita contraseña al usuario actual para confirmar acción"""
         dialog = tk.Toplevel(self)
-        dialog.title("Seguridad")
-        dialog.geometry("300x150")
+        dialog.title("Confirmar Seguridad")
+        dialog.geometry("350x220")
         dialog.transient(self)
         dialog.grab_set()
+        dialog.resizable(False, False)
         
-        tk.Label(dialog, text="Ingrese contraseña de Administrador:").pack(pady=10)
-        e_pass = tk.Entry(dialog, show="*")
+        # Center in parent
+        try:
+            x = self.winfo_rootx() + (self.winfo_width() // 2) - 175
+            y = self.winfo_rooty() + (self.winfo_height() // 2) - 110
+            dialog.geometry(f"+{x}+{y}")
+        except: pass
+        
+        tk.Label(dialog, text="🔒 Confirmación de Seguridad", font=("Segoe UI", 12, "bold"), fg="#2196F3").pack(pady=(20, 10))
+        tk.Label(dialog, text=f"Usuario: {self.user_data['username']}", font=("Segoe UI", 10)).pack()
+        tk.Label(dialog, text="Ingrese su contraseña para guardar cambios:", font=("Segoe UI", 10)).pack(pady=(10, 5))
+        
+        e_pass = tk.Entry(dialog, show="*", font=("Segoe UI", 11), width=25)
         e_pass.pack(pady=5)
+        e_pass.focus()
         
-        password = tk.StringVar()
+        result_var = tk.BooleanVar(value=False)
         
-        def on_ok():
-            password.set(e_pass.get())
-            dialog.destroy()
+        def check():
+            password = e_pass.get()
+            if not password: return
             
-        tk.Button(dialog, text="Aceptar", command=on_ok).pack(pady=10)
+            # Verify against DB
+            conn = get_db_connection()
+            try:
+                cursor = conn.cursor()
+                cursor.execute("SELECT password FROM users WHERE id = ?", (self.user_data['id'],))
+                row = cursor.fetchone()
+                if row and row['password'] == password:
+                    result_var.set(True)
+                    dialog.destroy()
+                else:
+                    messagebox.showerror("Error", "Contraseña incorrecta", parent=dialog)
+                    e_pass.delete(0, tk.END)
+                    e_pass.focus()
+            except Exception as e:
+                print(e)
+            finally:
+                conn.close()
+            
+        tk.Button(dialog, text="CONFIRMAR", command=check, bg="#4CAF50", fg="white", font=("Segoe UI", 10, "bold"), padx=20, pady=5).pack(pady=20)
+        
+        e_pass.bind("<Return>", lambda e: check())
+        
         self.wait_window(dialog)
-        return password.get()
-
-    def verify_admin(self, password):
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        # Verify against the 'admin' user specifically, or any admin role?
-        # Requirement says "contraseña del administrador". Let's check against the current user if they are admin, or the specific 'admin' account.
-        # Let's check against the specific 'admin' account for higher security as requested.
-        cursor.execute("SELECT password FROM users WHERE username = 'admin'")
-        row = cursor.fetchone()
-        conn.close()
-        return row and row['password'] == password
+        return result_var.get()
 
     def create_menu_tab(self):
         tab = tk.Frame(self.notebook)
@@ -774,6 +801,9 @@ class ConfigWindow(tk.Toplevel):
         e_term.pack(fill=tk.X, padx=20)
 
         def save():
+            if not self.verify_user_password():
+                return
+                
             update_setting(f'{loan_key}_interest', e_interest.get())
             update_setting(f'{loan_key}_mora', e_mora.get())
             update_setting(f'{loan_key}_max_items', e_items.get())
@@ -786,6 +816,9 @@ class ConfigWindow(tk.Toplevel):
         tk.Button(dialog, text="Guardar", command=save, bg="#4CAF50", fg="white").pack(pady=20)
 
     def save_menu_settings(self):
+        if not self.verify_user_password():
+             return
+
         # Save Visibility
         for key, var in self.module_vars.items():
             update_setting(key, '1' if var.get() else '0')

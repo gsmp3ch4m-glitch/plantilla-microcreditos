@@ -91,7 +91,14 @@ class LoansMenuWindow(ModernWindow):
         max_cols = 2  # 2 columns for better layout
         
         for default_name, display_name, visible_key, label_key in loan_types:
-            is_visible = get_setting(visible_key) == '1'
+            # Default to visible if setting is missing (None) or '1'. Only hide if explicitly '0'.
+            setting_val = get_setting(visible_key)
+            is_visible = setting_val != '0'
+            
+            # FORCE VISIBILITY for Congelado
+            if default_name == "Congelado":
+                is_visible = True
+                
             if is_visible:
                 label = get_setting(label_key) or display_name
                 icon = get_module_icon(default_name)
